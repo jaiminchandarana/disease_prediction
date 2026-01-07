@@ -1,10 +1,13 @@
 from langchain_groq import ChatGroq
 from langchain_core.prompts import PromptTemplate
 import json
-
+import os
+from dotenv import load_dotenv
+ 
+gorq_key = os.getenv("GROQ_API_KEY")
 model = ChatGroq(
     temperature=0,
-    groq_api_key='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',
+    groq_api_key= gorq_key,
     model_name="llama-3.3-70b-versatile"
 )
 
