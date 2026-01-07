@@ -689,7 +689,7 @@ Type a number or describe your query.`
   }
 
   const handleDownloadReport = () => {
-    const base = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+    const base = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'production' ? 'https://disease-prediction-3z87.onrender.com/api' : 'http://localhost:5000/api')
     const token = localStorage.getItem('token')
     if (!token) return
     window.open(`${base}/predictions/pdf?user_id=${token}`, '_blank')
