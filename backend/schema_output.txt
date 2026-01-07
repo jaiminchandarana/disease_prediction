@@ -1,0 +1,16 @@
+Schema for 'role' table:
+Column: id, Type: character varying, Max Length: 50
+Column: full_name, Type: character varying, Max Length: 50
+Column: email, Type: character varying, Max Length: 100
+Column: phone, Type: character varying, Max Length: 100
+Column: password, Type: character varying, Max Length: 100
+Column: role, Type: character varying, Max Length: 10
+Column: address, Type: character varying, Max Length: 100
+Column: department, Type: character varying, Max Length: 15
+Column: specialization, Type: character varying, Max Length: 15
+Column: qualification, Type: character varying, Max Length: 15
+Column: experience, Type: character varying, Max Length: 15
+Column: licence_no, Type: character varying, Max Length: 20
+Column: consulation_fee, Type: character varying, Max Length: 10
+Column: status, Type: character varying, Max Length: 10
+Column: admin_id, Type: character varying, Max Length: 10
