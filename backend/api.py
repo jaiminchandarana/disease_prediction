@@ -25,7 +25,7 @@ if os.path.exists(gtk3_path):
 
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": ["https://ayurix.vercel.app","http://localhost:5173", "http://localhost:3000"]}})
+CORS(app, resources={r"/*": {"origins": ["https://ayurix.vercel.app","http://localhost:5173", "http://localhost:5174", "http://localhost:3000"]}})
 
 @app.route('/')
 def home():
@@ -685,18 +685,41 @@ def admin_overview():
             return jsonify({'success': False, 'error': 'Unauthorized'}), 403
 
         # Counts
-        # Registered patients: unique patients who have a booking
-        cur.execute("SELECT COUNT(DISTINCT name) FROM booking")
-        patients_count = cur.fetchone()[0]
+        # Counts
+        # Registered patients: unique patients who have a booking with a doctor under this admin
+        cur.execute("""
+            SELECT COUNT(DISTINCT b.name) 
+            FROM booking b
+            JOIN role r ON r.role = 'doctor' AND r.full_name = b.doctor
+            WHERE r.admin_id = %s
+        """, (admin_token,))
+        patients_count_row = cur.fetchone()
+        patients_count = patients_count_row[0] if patients_count_row else 0
 
-        cur.execute("SELECT COUNT(*) FROM role WHERE role = 'doctor'")
-        doctors_count = cur.fetchone()[0]
+        # Doctors count: doctors registered by this admin
+        cur.execute("SELECT COUNT(*) FROM role WHERE role = 'doctor' AND admin_id = %s", (admin_token,))
+        doctors_count_row = cur.fetchone()
+        doctors_count = doctors_count_row[0] if doctors_count_row else 0
 
-        cur.execute("SELECT COUNT(*) FROM booking")
-        bookings_count = cur.fetchone()[0]
+        # Total Bookings: bookings with doctors under this admin
+        cur.execute("""
+            SELECT COUNT(*) 
+            FROM booking b
+            JOIN role r ON r.role = 'doctor' AND r.full_name = b.doctor
+            WHERE r.admin_id = %s
+        """, (admin_token,))
+        bookings_count_row = cur.fetchone()
+        bookings_count = bookings_count_row[0] if bookings_count_row else 0
 
-        cur.execute("SELECT COUNT(*) FROM prediction")
-        predictions_count = cur.fetchone()[0]
+        # Total Predictions: predictions made by doctors under this admin
+        cur.execute("""
+            SELECT COUNT(*) 
+            FROM prediction p
+            JOIN role r ON r.role = 'doctor' AND r.full_name = p.doctor
+            WHERE r.admin_id = %s
+        """, (admin_token,))
+        predictions_count_row = cur.fetchone()
+        predictions_count = predictions_count_row[0] if predictions_count_row else 0
 
         cur.close(); conn.close()
         return jsonify({

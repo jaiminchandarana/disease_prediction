@@ -107,9 +107,10 @@ export const AuthProvider = ({ children }) => {
       const response = await authService.register(userData)
       
       if (response.success) {
-        setUser(response.user)
-        setIsAuthenticated(true)
-        toast.success('Registration successful!')
+        // Do not auto-login after register, let the user login manually
+        // setUser(response.user)
+        // setIsAuthenticated(true)
+        toast.success('Registration successful! Please login to continue.')
         return { success: true }
       } else {
         toast.error(response.error || 'Registration failed')

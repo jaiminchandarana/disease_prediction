@@ -9,7 +9,9 @@ import {
   FaUsers,
   FaClipboardList,
   FaSignOutAlt,
-  FaChartLine
+  FaChartLine,
+  FaBars,
+  FaTimes
 } from 'react-icons/fa'
 import { MdTrendingDown, MdTrendingUp } from 'react-icons/md' // ✅ Both trending icons from Material Design
 
@@ -137,162 +139,177 @@ const DoctorDashboard = () => {
     { icon: FaSignOutAlt, label: 'Logout', href: '#' }
   ]
 
-  return (
-    <div className="d-flex">
-      {/* Sidebar */}
-      <div className="sidebar col-md-3 col-lg-2 p-0">
-        <div className="p-3">
-          <div className="d-flex align-items-center mb-4">
-            <div className="avatar me-3">
-              {user?.name?.split(' ').map(n => n[0]).join('')}
-            </div>
-            <div>
-              <h6 className="mb-0">{user?.name}</h6>
-              <small className="text-muted">Doctor ID: {user?.id || '---'}</small>
-              <div><small className="text-muted">{user?.email}</small></div>
-            </div>
-          </div>
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
-          <nav>
-            {sidebarItems.map((item, index) => (
-              item.label === 'Logout' ? (
-                <button
-                  key={index}
-                  className={`sidebar-item btn btn-link text-start w-100 ${item.active ? 'active' : ''}`}
-                  onClick={logout}
-                  style={{ textDecoration: 'none' }}
-                >
-                  <item.icon size={18} />
-                  <span>{item.label}</span>
-                </button>
-              ) : (
-                <Link
-                  key={index}
-                  to={item.href}
-                  className={`sidebar-item ${item.active ? 'active' : ''}`}
-                >
-                  <item.icon size={18} />
-                  <span>{item.label}</span>
-                </Link>
-              )
-            ))}
-          </nav>
-        </div>
+  return (
+    <div className="dashboard-container">
+      {/* Mobile Sidebar Toggle */}
+      <div className="d-md-none p-3 bg-light border-bottom d-flex justify-content-between align-items-center">
+        <span className="fw-bold">Doctor Menu</span>
+        <button
+          className="btn btn-outline-primary btn-sm"
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+        >
+          {isSidebarOpen ? <FaTimes /> : <FaBars />}
+        </button>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-grow-1 p-4">
-        <div className="mb-4">
-          <h2 className="fw-bold text-dark">Dashboard</h2>
-          <p className="text-muted mb-0">Welcome back, {user?.name}</p>
-        </div>
-
-        {/* Overview Stats */}
-        <div className="row g-4 mb-4">
-          <div className="col-lg-4 col-md-6">
-            <div className="stats-card">
-              <div className="d-flex justify-content-between align-items-start">
-                <div>
-                  <div className="stats-number">{dashboardData.totalPredictions}</div>
-                  <div className="stats-label">Total Predictions</div>
-                </div>
-                <FaChartLine className="text-primary" size={24} />
+      <div className="d-flex flex-column flex-md-row">
+        {/* Sidebar */}
+        <div className={`sidebar col-md-3 col-lg-2 p-0 ${isSidebarOpen ? 'd-block' : 'd-none d-md-block'}`}>
+          <div className="p-3">
+            <div className="d-flex align-items-center mb-4">
+              <div className="avatar me-3">
+                {user?.name?.split(' ').map(n => n[0]).join('')}
+              </div>
+              <div>
+                <h6 className="mb-0">{user?.name}</h6>
+                <small className="text-muted">Doctor ID: {user?.id || '---'}</small>
+                <div><small className="text-muted">{user?.email}</small></div>
               </div>
             </div>
-          </div>
 
-          <div className="col-lg-4 col-md-6">
-            <div className="stats-card">
-              <div className="d-flex justify-content-between align-items-start">
-                <div>
-                  <div className="stats-number">{dashboardData.totalPatients}</div>
-                  <div className="stats-label">Total Patients</div>
-                </div>
-                <FaUsers className="text-primary" size={24} />
-              </div>
-            </div>
-          </div>
-
-          <div className="col-lg-4 col-md-6">
-            <div className="stats-card">
-              <div className="d-flex justify-content-between align-items-start">
-                <div>
-                  <div className="stats-number">{dashboardData.latestReports}</div>
-                  <div className="stats-label">Latest Reports</div>
-                </div>
-                <FaClipboardList className="text-primary" size={24} />
-              </div>
-            </div>
+            <nav>
+              {sidebarItems.map((item, index) => (
+                item.label === 'Logout' ? (
+                  <button
+                    key={index}
+                    className={`sidebar-item btn btn-link text-start w-100 ${item.active ? 'active' : ''}`}
+                    onClick={logout}
+                    style={{ textDecoration: 'none' }}
+                  >
+                    <item.icon size={18} />
+                    <span>{item.label}</span>
+                  </button>
+                ) : (
+                  <Link
+                    key={index}
+                    to={item.href}
+                    className={`sidebar-item ${item.active ? 'active' : ''}`}
+                  >
+                    <item.icon size={18} />
+                    <span>{item.label}</span>
+                  </Link>
+                )
+              ))}
+            </nav>
           </div>
         </div>
 
-        {/* Booking Status Section */}
-        <div className="row g-4 mb-4">
-          <div className="col-lg-12">
-            <div className="card border-0 shadow-sm">
-              <div className="card-header bg-white border-0 py-3">
-                <div className="d-flex justify-content-between align-items-center">
-                  <h5 className="mb-0 fw-bold">Booking Status</h5>
+        {/* Main Content */}
+        <div className="flex-grow-1 p-4">
+          <div className="mb-4">
+            <h2 className="fw-bold text-dark">Dashboard</h2>
+            <p className="text-muted mb-0">Welcome back, {user?.name}</p>
+          </div>
+
+          {/* Overview Stats */}
+          <div className="row g-4 mb-4">
+            <div className="col-lg-4 col-md-6">
+              <div className="stats-card">
+                <div className="d-flex justify-content-between align-items-start">
+                  <div>
+                    <div className="stats-number">{dashboardData.totalPredictions}</div>
+                    <div className="stats-label">Total Predictions</div>
+                  </div>
+                  <FaChartLine className="text-primary" size={24} />
                 </div>
               </div>
-              <div className="card-body">
-                <div className="row g-3 mb-4">
-                  <div className="col-md-6">
-                    <div className="text-center">
-                      <div className="display-4 fw-bold text-primary">{bookingPerc.completed}%</div>
-                      <div className="text-muted">Completed</div>
+            </div>
+
+            <div className="col-lg-4 col-md-6">
+              <div className="stats-card">
+                <div className="d-flex justify-content-between align-items-start">
+                  <div>
+                    <div className="stats-number">{dashboardData.totalPatients}</div>
+                    <div className="stats-label">Total Patients</div>
+                  </div>
+                  <FaUsers className="text-primary" size={24} />
+                </div>
+              </div>
+            </div>
+
+            <div className="col-lg-4 col-md-6">
+              <div className="stats-card">
+                <div className="d-flex justify-content-between align-items-start">
+                  <div>
+                    <div className="stats-number">{dashboardData.latestReports}</div>
+                    <div className="stats-label">Latest Reports</div>
+                  </div>
+                  <FaClipboardList className="text-primary" size={24} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Booking Status Section */}
+          <div className="row g-4 mb-4">
+            <div className="col-lg-12">
+              <div className="card border-0 shadow-sm">
+                <div className="card-header bg-white border-0 py-3">
+                  <div className="d-flex justify-content-between align-items-center">
+                    <h5 className="mb-0 fw-bold">Booking Status</h5>
+                  </div>
+                </div>
+                <div className="card-body">
+                  <div className="row g-3 mb-4">
+                    <div className="col-md-6">
+                      <div className="text-center">
+                        <div className="display-4 fw-bold text-primary">{bookingPerc.completed}%</div>
+                        <div className="text-muted">Completed</div>
+                      </div>
+                    </div>
+                    <div className="col-md-6">
+                      <div className="text-center">
+                        <div className="display-4 fw-bold text-danger">{bookingPerc.cancelled}%</div>
+                        <div className="text-muted">Cancelled</div>
+                      </div>
                     </div>
                   </div>
-                  <div className="col-md-6">
-                    <div className="text-center">
-                      <div className="display-4 fw-bold text-danger">{bookingPerc.cancelled}%</div>
-                      <div className="text-muted">Cancelled</div>
-                    </div>
-                  </div>
+
                 </div>
-
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Patient List */}
-        <div className="card border-0 shadow-sm">
-          <div className="card-header bg-white border-0 py-3">
-            <div className="d-flex justify-content-between align-items-center">
-              <h5 className="mb-0 fw-bold">Patient List</h5>
-              <div className="d-flex gap-2">
-                <button className="btn btn-sm btn-outline-primary">Date</button>
-                <button className="btn btn-sm btn-outline-primary">Name</button>
-                <button className="btn btn-sm btn-outline-primary">Status</button>
+          {/* Patient List */}
+          <div className="card border-0 shadow-sm">
+            <div className="card-header bg-white border-0 py-3">
+              <div className="d-flex justify-content-between align-items-center">
+                <h5 className="mb-0 fw-bold">Patient List</h5>
+                <div className="d-flex gap-2">
+                  <button className="btn btn-sm btn-outline-primary">Date</button>
+                  <button className="btn btn-sm btn-outline-primary">Name</button>
+                  <button className="btn btn-sm btn-outline-primary">Status</button>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="card-body">
-            <div className="table-responsive">
-              <table className="table table-hover">
-                <thead className="table-light">
-                  <tr>
-                    <th>Name</th>
-                    <th>Date</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {patientList.map((patient, index) => (
-                    <tr key={index}>
-                      <td className="fw-semibold">{patient.name}</td>
-                      <td className="text-muted">{patient.date}</td>
-                      <td>
-                        <span className={`badge ${patient.status === 'Completed' ? 'bg-success' : 'bg-warning text-dark'
-                          }`}>
-                          {patient.status}
-                        </span>
-                      </td>
+            <div className="card-body">
+              <div className="table-responsive">
+                <table className="table table-hover">
+                  <thead className="table-light">
+                    <tr>
+                      <th>Name</th>
+                      <th>Date</th>
+                      <th>Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {patientList.map((patient, index) => (
+                      <tr key={index}>
+                        <td className="fw-semibold">{patient.name}</td>
+                        <td className="text-muted">{patient.date}</td>
+                        <td>
+                          <span className={`badge ${patient.status === 'Completed' ? 'bg-success' : 'bg-warning text-dark'
+                            }`}>
+                            {patient.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>

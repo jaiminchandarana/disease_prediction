@@ -6,7 +6,7 @@ import './App.css'
 
 function App() {
   return (
-    <div style={{ position: 'relative', minHeight: '100vh', overflow: 'hidden' }}>
+    <div style={{ position: 'relative', minHeight: '100vh', overflowX: 'hidden' }}>
       {/* Full Page DNA Wavy Background */}
       <div
         style={{

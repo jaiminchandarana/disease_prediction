@@ -215,6 +215,34 @@
   }
 }
 
+/* Stats Card Styles */
+.stats-card {
+  background-color: #fff;
+  border-radius: 10px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  transition: transform 0.2s;
+  height: 100%;
+}
+
+.stats-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.stats-number {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #2d3748;
+  margin-bottom: 0.25rem;
+}
+
+.stats-label {
+  color: #718096;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
 /* Mobile-specific adjustments */
 @media (max-width: 768px) {
   .stats-card {
@@ -223,6 +251,10 @@
   
   .table-responsive {
     font-size: 0.875rem;
+    overflow-x: auto !important; /* Force horizontal scroll */
+    -webkit-overflow-scrolling: touch; /* Smooth scroll on iOS */
+    display: block;
+    width: 100%;
   }
   
   .btn-group-vertical .btn {
