@@ -4,12 +4,25 @@ import json
 import os
 from dotenv import load_dotenv
  
-gorq_key = os.getenv("GROQ_API_KEY")
-model = ChatGroq(
-    temperature=0,
-    groq_api_key= gorq_key,
-    model_name="llama-3.3-70b-versatile"
-)
+
+model = None
+
+def get_model():
+    global model
+    if model is None:
+        gorq_key = os.getenv("GROQ_API_KEY")
+        if not gorq_key:
+            # Try loading from .env if not found (though api.py should have done it)
+            load_dotenv()
+            gorq_key = os.getenv("GROQ_API_KEY")
+        
+        if gorq_key:
+            model = ChatGroq(
+                temperature=0,
+                groq_api_key=gorq_key,
+                model_name="llama-3.3-70b-versatile"
+            )
+    return model
 
 def predict_disease_from_qa(qna_data):
     """
@@ -58,7 +71,12 @@ def predict_disease_from_qa(qna_data):
             """
         )
         
-        chain_qna = prompt_qna | model
+        
+        llm = get_model()
+        if not llm:
+            raise ValueError("GROQ_API_KEY not found. Please set it in environment variables.")
+            
+        chain_qna = prompt_qna | llm
         res = chain_qna.invoke({"qna": qna_text})
         
         # Parse the response

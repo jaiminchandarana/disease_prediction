@@ -1,5 +1,8 @@
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
+from dotenv import load_dotenv
+load_dotenv() # Load environment variables first
+
 from connection import connection
 from generate import generate_code
 from llmmodel import predict_disease_from_qa
@@ -101,7 +104,6 @@ def register():
         }), 200
         
     except Exception as e:
-        print(f"Register Error: {e}", file=sys.stderr)
         return jsonify({
             'success': False,
             'error': str(e)
@@ -165,7 +167,6 @@ def login():
             }), 401
         
     except Exception as e:
-        print(f"Login Error: {e}", file=sys.stderr)
         return jsonify({
             'success': False,
             'error': str(e)
