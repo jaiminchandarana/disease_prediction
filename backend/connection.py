@@ -1,6 +1,7 @@
 import psycopg2
 import os
 
+def connection():
     # Check for DATABASE_URL environment variable (standard for Render and Production)
     db_url = os.environ.get('DATABASE_URL')
     
