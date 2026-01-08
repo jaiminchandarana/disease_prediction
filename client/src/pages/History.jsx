@@ -15,7 +15,7 @@ import { MdTrendingUp, MdTrendingDown } from 'react-icons/md'
 
 const History = () => {
   const { user } = useAuth()
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+  const baseUrl = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'production' ? 'https://disease-prediction-3z87.onrender.com/api' : 'http://localhost:5000/api')
   const [searchTerm, setSearchTerm] = useState('')
   const [filterBy, setFilterBy] = useState('all')
   const [sortBy, setSortBy] = useState('date')

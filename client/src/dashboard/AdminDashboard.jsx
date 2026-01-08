@@ -366,7 +366,7 @@ const AdminDashboard = () => {
                               >
                                 <FaTrash size={14} />
                               </button>
-                              <button className="btn btn-sm btn-outline-secondary" onClick={() => window.open(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/predictions/pdf?user_id=${doctor.id}`, '_blank')}>
+                              <button className="btn btn-sm btn-outline-secondary" onClick={() => window.open(`${import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'production' ? 'https://disease-prediction-3z87.onrender.com/api' : 'http://localhost:5000/api')}/predictions/pdf?user_id=${doctor.id}`, '_blank')}>
                                 <FaFileExport size={14} />
                               </button>
                             </div>

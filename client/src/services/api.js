@@ -30,7 +30,7 @@ api.interceptors.response.use(
   },
   (error) => {
     const message = error.response?.data?.error || error.message || 'Something went wrong'
-    
+
     // Handle specific error cases
     if (error.response?.status === 401) {
       // Unauthorized - clear token and redirect to login
@@ -187,7 +187,7 @@ export const notificationService = {
   saveAll: (list) => {
     try {
       localStorage.setItem('notifications', JSON.stringify(list))
-    } catch {}
+    } catch { }
   },
   add: (notification) => {
     const list = notificationService.getAll()

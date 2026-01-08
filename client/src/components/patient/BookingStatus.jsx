@@ -39,18 +39,18 @@ const BookingStatus = () => {
           const data = (res.bookings || [])
             .filter(b => b.name === (user?.name || ''))
             .map(b => {
-            const dt = b.appointment ? new Date(b.appointment) : null
-            return {
-              id: b.booking_id,
-              name: b.name,
-              doctor: b.doctor,
-              department: b.department,
-              date: dt ? dt.toISOString().slice(0,10) : '-',
-              time: dt ? dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-',
-              status: (b.status || 'pending').toLowerCase(),
-              avatar: (b.doctor || '').split(' ').map(n => n[0]).join('').toUpperCase() || 'DR'
-            }
-          })
+              const dt = b.appointment ? new Date(b.appointment) : null
+              return {
+                id: b.booking_id,
+                name: b.name,
+                doctor: b.doctor,
+                department: b.department,
+                date: dt ? dt.toISOString().slice(0, 10) : '-',
+                time: dt ? dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-',
+                status: (b.status || 'pending').toLowerCase(),
+                avatar: (b.doctor || '').split(' ').map(n => n[0]).join('').toUpperCase() || 'DR'
+              }
+            })
           setAppointments(data)
         }
       } catch (e) {
@@ -64,30 +64,30 @@ const BookingStatus = () => {
   }, [])
 
   const sidebarItems = [
-    { 
-      icon: FaClipboardList, 
-      label: 'Predictions', 
+    {
+      icon: FaClipboardList,
+      label: 'Predictions',
       href: '/dashboard'
     },
-    { 
-      icon: FaUsers, 
-      label: 'Contact Doctor', 
+    {
+      icon: FaUsers,
+      label: 'Contact Doctor',
       href: '/dashboard/contact-doctor'
     },
-    { 
-      icon: FaCalendarAlt, 
-      label: 'Booking Status', 
+    {
+      icon: FaCalendarAlt,
+      label: 'Booking Status',
       href: '/dashboard/booking-status',
       active: true
     },
-    { 
-      icon: FaUser, 
-      label: 'Profile', 
+    {
+      icon: FaUser,
+      label: 'Profile',
       href: '/dashboard/profile'
     },
-    { 
-      icon: FaSignOutAlt, 
-      label: 'Logout', 
+    {
+      icon: FaSignOutAlt,
+      label: 'Logout',
       href: '#',
       isLogout: true
     }
@@ -108,7 +108,7 @@ const BookingStatus = () => {
     }
   }
 
-  const filteredAppointments = appointments.filter(apt => 
+  const filteredAppointments = appointments.filter(apt =>
     filterStatus === 'all' || apt.status === filterStatus
   )
 
@@ -187,9 +187,8 @@ const BookingStatus = () => {
               <Link
                 key={index}
                 to={item.href}
-                className={`sidebar-item ${
-                  item.active || location.pathname === item.href ? 'active' : ''
-                }`}
+                className={`sidebar-item ${item.active || location.pathname === item.href ? 'active' : ''
+                  }`}
                 onClick={(e) => handleSidebarClick(item, e)}
               >
                 <item.icon size={18} />
@@ -209,7 +208,7 @@ const BookingStatus = () => {
             <p className="text-muted mb-0">Manage your appointments</p>
           </div>
           <div className="d-flex gap-2">
-            <button 
+            <button
               className="btn btn-outline-secondary"
               onClick={handleViewAllHistory}
             >
@@ -227,7 +226,7 @@ const BookingStatus = () => {
             {/* Status Filter */}
             <div className="row g-2 mb-4">
               <div className="col-6 col-md-3">
-                <button 
+                <button
                   className={`btn w-100 btn-sm ${filterStatus === 'all' ? 'btn-primary' : 'btn-outline-primary'}`}
                   onClick={() => setFilterStatus('all')}
                 >
@@ -235,7 +234,7 @@ const BookingStatus = () => {
                 </button>
               </div>
               <div className="col-6 col-md-3">
-                <button 
+                <button
                   className={`btn w-100 btn-sm ${filterStatus === 'confirmed' ? 'btn-success' : 'btn-outline-success'}`}
                   onClick={() => setFilterStatus('confirmed')}
                 >
@@ -243,7 +242,7 @@ const BookingStatus = () => {
                 </button>
               </div>
               <div className="col-6 col-md-3">
-                <button 
+                <button
                   className={`btn w-100 btn-sm ${filterStatus === 'pending' ? 'btn-warning' : 'btn-outline-warning'}`}
                   onClick={() => setFilterStatus('pending')}
                 >
@@ -251,7 +250,7 @@ const BookingStatus = () => {
                 </button>
               </div>
               <div className="col-6 col-md-3">
-                <button 
+                <button
                   className={`btn w-100 btn-sm ${filterStatus === 'completed' ? 'btn-info' : 'btn-outline-info'}`}
                   onClick={() => setFilterStatus('completed')}
                 >
@@ -266,11 +265,11 @@ const BookingStatus = () => {
                 <FaCalendarAlt size={48} className="text-muted mb-3" />
                 <h5 className="text-muted mb-2">No appointments found</h5>
                 <p className="text-muted mb-3">
-                  {filterStatus === 'all' 
-                    ? "You don't have any appointments yet." 
+                  {filterStatus === 'all'
+                    ? "You don't have any appointments yet."
                     : `No ${filterStatus} appointments found.`}
                 </p>
-                <button 
+                <button
                   className="btn btn-primary"
                   onClick={handleBookNewAppointment}
                 >
@@ -293,7 +292,7 @@ const BookingStatus = () => {
                       <div className="col-md-6">
                         <h6 className="mb-1 fw-bold">{appointment.doctor}</h6>
                         <p className="text-primary mb-1 small">Department: {appointment.department}</p>
-                        
+
                         <div className="d-flex align-items-center mb-1">
                           <FaCalendarAlt className="text-muted me-1" size={12} />
                           <span className="small me-3">{appointment.date}</span>
@@ -309,13 +308,13 @@ const BookingStatus = () => {
                       <div className="col-md-4 text-end">
                         {(appointment.status === 'confirmed' || appointment.status === 'pending') && (
                           <div className="btn-group-vertical d-grid gap-1">
-                            <button 
+                            <button
                               className="btn btn-outline-warning btn-sm"
                               onClick={() => handleReschedule(appointment.id)}
                             >
                               <FaEdit className="me-1" /> Reschedule
                             </button>
-                            <button 
+                            <button
                               className="btn btn-outline-danger btn-sm"
                               onClick={() => handleCancel(appointment.id)}
                             >
@@ -337,7 +336,7 @@ const BookingStatus = () => {
                         )}
                         {appointment.status === 'completed' && (
                           <button className="btn btn-outline-primary btn-sm" onClick={() => {
-                            const base = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+                            const base = import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'production' ? 'https://disease-prediction-3z87.onrender.com/api' : 'http://localhost:5000/api')
                             const token = localStorage.getItem('token')
                             if (token) window.open(`${base}/predictions/pdf?user_id=${token}`, '_blank')
                           }}>

@@ -22,7 +22,7 @@ if os.path.exists(gtk3_path):
 
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": ["https://ayurix.vercel.app","http://localhost:5173", "http://localhost:3000"]}})
 
 def hash_password(password):
     """Hash password using SHA256"""
