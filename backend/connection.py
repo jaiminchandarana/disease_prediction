@@ -11,8 +11,7 @@ def connection():
             db_url = 'postgresql://disease_prediction_jpox_user:86lJJTz9aItYO00G0Gg2ODEyYvOsHSob@dpg-d5f832ruibrs7396mh9g-a/disease_prediction_jpox'
             sslmode = "require"
         if db_url:
-            conn = psycopg2.connect(db_url)
-            sslmode = "require"
+            conn = psycopg2.connect(db_url, sslmode='require')
         else:
             # Local fallback
             conn = psycopg2.connect(
