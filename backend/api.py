@@ -101,6 +101,7 @@ def register():
         }), 200
         
     except Exception as e:
+        print(f"Register Error: {e}", file=sys.stderr)
         return jsonify({
             'success': False,
             'error': str(e)
@@ -164,6 +165,7 @@ def login():
             }), 401
         
     except Exception as e:
+        print(f"Login Error: {e}", file=sys.stderr)
         return jsonify({
             'success': False,
             'error': str(e)
