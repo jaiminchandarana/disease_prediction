@@ -127,10 +127,30 @@ export const authService = {
   // Change password
   changePassword: async (currentPassword, newPassword) => {
     try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
       const response = await api.put('/auth/change-password', {
+        userId: user.id,
         currentPassword,
         newPassword
       })
+      return response
+    } catch (error) {
+      throw error
+    }
+  },
+
+  sendOtp: async (email) => {
+    try {
+      const response = await api.post('/auth/send-otp', { email })
+      return response
+    } catch (error) {
+      throw error
+    }
+  },
+
+  resetPasswordOtp: async (email, otp, newPassword) => {
+    try {
+      const response = await api.put('/auth/reset-password-otp', { email, otp, newPassword })
       return response
     } catch (error) {
       throw error

@@ -23,6 +23,8 @@ if os.path.exists(gtk3_path):
         except Exception:
             pass
 
+# In-memory OTP store (for demonstration purposes, use Redis/DB in production)
+otp_store = {}
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": ["https://ayurix.vercel.app","http://localhost:5173", "http://localhost:5174", "http://localhost:3000"]}})

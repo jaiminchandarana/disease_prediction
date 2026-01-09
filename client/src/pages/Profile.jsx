@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useAuth } from '../auth/AuthContext'
 import { FaUser, FaEnvelope, FaPhone, FaMapMarkerAlt, FaEdit, FaSave, FaTimes } from 'react-icons/fa'
-import api from '../services/api'
+import { FaUser, FaEnvelope, FaPhone, FaMapMarkerAlt, FaEdit, FaSave, FaTimes, FaLock, FaKey } from 'react-icons/fa'
+import { authService } from '../services/api'
 import toast from 'react-hot-toast'
 
 const Profile = () => {
@@ -13,6 +14,53 @@ const Profile = () => {
   const [doctorQuickStats, setDoctorQuickStats] = useState({ patients: 0, consultations: 0, licence_no: '' })
   const [doctorProfileInfo, setDoctorProfileInfo] = useState({ specialization: '', experience: '', qualification: '' })
   const [patientQuickStats, setPatientQuickStats] = useState({ predictions: 0, appointments: 0 })
+
+  // Password Modal State
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false)
+  const [pwdMode, setPwdMode] = useState('current') // 'current' or 'otp'
+  const [pwdData, setPwdData] = useState({ current: '', new: '', otp: '' })
+  const [otpSent, setOtpSent] = useState(false)
+
+  const handlePwdChange = (e) => setPwdData({ ...pwdData, [e.target.name]: e.target.value })
+
+  const handleSendOtp = async () => {
+    try {
+      const res = await authService.sendOtp(user.email)
+      if (res.success) {
+        setOtpSent(true)
+        toast.success('OTP sent to ' + user.email)
+      } else {
+        toast.error(res.error || 'Failed to send OTP')
+      }
+    } catch { toast.error('Error sending OTP') }
+  }
+
+  const handleSubmitPassword = async () => {
+    try {
+      if (pwdMode === 'current') {
+        const res = await authService.changePassword(pwdData.current, pwdData.new)
+        if (res.success) {
+          toast.success('Password changed!')
+          setIsPasswordModalOpen(false)
+          setPwdData({ current: '', new: '', otp: '' })
+        } else {
+          toast.error(res.error || 'Failed')
+        }
+      } else {
+        const res = await authService.resetPasswordOtp(user.email, pwdData.otp, pwdData.new)
+        if (res.success) {
+          toast.success('Password changed!')
+          setIsPasswordModalOpen(false)
+          setPwdData({ current: '', new: '', otp: '' })
+          setOtpSent(false)
+        } else {
+          toast.error(res.error || 'Failed')
+        }
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.error || 'Error changing password')
+    }
+  }
 
   const {
     register,
@@ -26,7 +74,9 @@ const Profile = () => {
       phone: user?.phone || '',
       address: user?.address || '',
       dateOfBirth: user?.dateOfBirth || '',
-      gender: user?.gender || '',
+      address: user?.address || '',
+      dateOfBirth: user?.dateOfBirth || '',
+      emergencyContact: user?.emergencyContact || '',
       emergencyContact: user?.emergencyContact || '',
       medicalHistory: user?.medicalHistory || ''
     }
@@ -35,9 +85,7 @@ const Profile = () => {
   const onSubmit = async (data) => {
     setLoading(true)
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
+      await authService.updateProfile({ ...data, id: user.id })
       updateUser({ ...user, ...data })
       setIsEditing(false)
       toast.success('Profile updated successfully!')
@@ -57,13 +105,13 @@ const Profile = () => {
       try {
         const docs = await api.get(`/auth/get-all-doctors?admin_token=${adminToken}`)
         if (docs.success) usersCount = (docs.doctors || []).length
-      } catch {}
+      } catch { }
       // Predictions: admin self + all doctors under admin
       let predCount = 0
       try {
         const adminPred = await api.get(`/predictions/get?user_id=${adminToken}`)
         if (adminPred.success) predCount += (adminPred.count || adminPred.predictions?.length || 0)
-      } catch {}
+      } catch { }
       try {
         const docs = await api.get(`/auth/get-all-doctors?admin_token=${adminToken}`)
         if (docs.success) {
@@ -71,10 +119,10 @@ const Profile = () => {
             try {
               const res = await api.get(`/predictions/get?user_id=${d.id}`)
               if (res.success) predCount += (res.count || res.predictions?.length || 0)
-            } catch {}
+            } catch { }
           }
         }
-      } catch {}
+      } catch { }
       setAdminQuickStats({ users: usersCount, predictions: predCount })
     }
     loadQuickStats()
@@ -98,7 +146,7 @@ const Profile = () => {
             })
           }
         }
-      } catch {}
+      } catch { }
       // Bookings for this doctor
       try {
         const b = await api.get('/bookings')
@@ -108,7 +156,7 @@ const Profile = () => {
           const consultations = mine.filter(x => (x.status || '').toLowerCase() === 'completed').length
           setDoctorQuickStats(prev => ({ ...prev, patients: patients.size, consultations }))
         }
-      } catch {}
+      } catch { }
     }
     loadDoctorStats()
   }, [user])
@@ -121,14 +169,14 @@ const Profile = () => {
       try {
         const res = await api.get(`/predictions/get?user_id=${patientId}`)
         if (res.success) predCount = res.count || (res.predictions || []).length
-      } catch {}
+      } catch { }
       let apptCount = 0
       try {
         const b = await api.get('/bookings')
         if (b.success) {
           apptCount = (b.bookings || []).filter(x => x.name === user.name).length
         }
-      } catch {}
+      } catch { }
       setPatientQuickStats({ predictions: predCount, appointments: apptCount })
     }
     loadPatientStats()
@@ -160,8 +208,8 @@ const Profile = () => {
           {/* Profile Card */}
           <div className="card border-0 shadow-sm mb-4">
             <div className="card-body text-center p-4">
-              <div 
-                className="avatar mx-auto mb-3" 
+              <div
+                className="avatar mx-auto mb-3"
                 style={{ width: '120px', height: '120px', fontSize: '3rem' }}
               >
                 {getInitials(user?.name)}
@@ -171,14 +219,14 @@ const Profile = () => {
                 {getRoleBadge(user?.role).text}
               </span>
               <p className="text-muted mb-0">{user?.email}</p>
-              
+
               {user?.role === 'patient' && (
                 <div className="mt-3">
                   <small className="text-muted">Patient ID: </small>
                   <span className="fw-semibold">{user?.id || '-'}</span>
                 </div>
               )}
-              
+
               {user?.role === 'doctor' && (
                 <div className="mt-3">
                   <small className="text-muted">License ID: </small>
@@ -206,7 +254,7 @@ const Profile = () => {
                   </div>
                 </div>
               )}
-              
+
               {user?.role === 'doctor' && (
                 <div className="row g-3">
                   <div className="col-6 text-center">
@@ -219,7 +267,7 @@ const Profile = () => {
                   </div>
                 </div>
               )}
-              
+
               {user?.role === 'admin' && (
                 <div className="row g-3">
                   <div className="col-6 text-center">
@@ -243,7 +291,7 @@ const Profile = () => {
               <div className="d-flex justify-content-between align-items-center">
                 <h5 className="mb-0 fw-bold">Profile Information</h5>
                 {!isEditing ? (
-                  <button 
+                  <button
                     className="btn btn-outline-primary btn-sm"
                     onClick={() => setIsEditing(true)}
                   >
@@ -252,7 +300,7 @@ const Profile = () => {
                   </button>
                 ) : (
                   <div className="d-flex gap-2">
-                    <button 
+                    <button
                       className="btn btn-success btn-sm"
                       onClick={handleSubmit(onSubmit)}
                       disabled={loading}
@@ -260,7 +308,7 @@ const Profile = () => {
                       <FaSave className="me-2" />
                       {loading ? 'Saving...' : 'Save'}
                     </button>
-                    <button 
+                    <button
                       className="btn btn-outline-secondary btn-sm"
                       onClick={handleCancel}
                     >
@@ -271,7 +319,7 @@ const Profile = () => {
                 )}
               </div>
             </div>
-            
+
             <div className="card-body p-4">
               <form onSubmit={handleSubmit(onSubmit)}>
                 <div className="row g-4">
@@ -282,7 +330,7 @@ const Profile = () => {
                       Basic Information
                     </h6>
                   </div>
-                  
+
                   <div className="col-md-6">
                     <label className="form-label fw-semibold">Full Name</label>
                     {isEditing ? (
@@ -326,21 +374,7 @@ const Profile = () => {
                     )}
                   </div>
 
-                  <div className="col-md-6">
-                    <label className="form-label fw-semibold">Gender</label>
-                    {isEditing ? (
-                      <select className="form-select" {...register('gender')}>
-                        <option value="">Select gender</option>
-                        <option value="male">Male</option>
-                        <option value="female">Female</option>
-                        <option value="other">Other</option>
-                      </select>
-                    ) : (
-                      <div className="form-control-plaintext">
-                        {user?.gender || 'Not specified'}
-                      </div>
-                    )}
-                  </div>
+
 
                   <div className="col-12">
                     <label className="form-label fw-semibold">Address</label>
@@ -370,9 +404,9 @@ const Profile = () => {
                             {...register('specialization')}
                           />
                         ) : (
-                      <div className="form-control-plaintext">
-                        {doctorProfileInfo.specialization || user?.specialization || 'Not specified'}
-                      </div>
+                          <div className="form-control-plaintext">
+                            {doctorProfileInfo.specialization || user?.specialization || 'Not specified'}
+                          </div>
                         )}
                       </div>
 
@@ -416,14 +450,18 @@ const Profile = () => {
                   <div className="col-12">
                     <h6 className="fw-bold text-muted mb-3">Account Settings</h6>
                   </div>
-                  
+
                   <div className="col-12">
                     <div className="d-flex justify-content-between align-items-center p-3 bg-light rounded">
                       <div>
                         <h6 className="mb-1 fw-semibold">Change Password</h6>
                         <small className="text-muted">Update your account password</small>
                       </div>
-                      <button className="btn btn-outline-primary btn-sm">
+                      <button
+                        type="button"
+                        className="btn btn-outline-primary btn-sm"
+                        onClick={() => setIsPasswordModalOpen(true)}
+                      >
                         Change Password
                       </button>
                     </div>
@@ -459,6 +497,83 @@ const Profile = () => {
         </div>
       </div>
     </div>
+      
+      {/* Password Modal */ }
+  {
+    isPasswordModalOpen && (
+      <div className="modal d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+        <div className="modal-dialog modal-dialog-centered">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h5 className="modal-title">Change Password</h5>
+              <button type="button" className="btn-close" onClick={() => setIsPasswordModalOpen(false)}></button>
+            </div>
+            <div className="modal-body">
+              {/* Tabs */}
+              <ul className="nav nav-tabs mb-3">
+                <li className="nav-item">
+                  <button
+                    className={`nav-link ${pwdMode === 'current' ? 'active' : ''}`}
+                    onClick={() => setPwdMode('current')}>
+                    Verify Current Password
+                  </button>
+                </li>
+                <li className="nav-item">
+                  <button
+                    className={`nav-link ${pwdMode === 'otp' ? 'active' : ''}`}
+                    onClick={() => setPwdMode('otp')}>
+                    Verify via Email OTP
+                  </button>
+                </li>
+              </ul>
+
+              {pwdMode === 'current' ? (
+                <div className="d-flex flex-column gap-3">
+                  <div>
+                    <label className="form-label">Current Password</label>
+                    <input type="password" name="current" className="form-control" value={pwdData.current} onChange={handlePwdChange} />
+                  </div>
+                  <div>
+                    <label className="form-label">New Password</label>
+                    <input type="password" name="new" className="form-control" value={pwdData.new} onChange={handlePwdChange} />
+                  </div>
+                </div>
+              ) : (
+                <div className="d-flex flex-column gap-3">
+                  {!otpSent ? (
+                    <div className="text-center py-3">
+                      <p>We will send a 6-digit OTP to <strong>{user.email}</strong></p>
+                      <button type="button" className="btn btn-primary" onClick={handleSendOtp}>Send OTP</button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="alert alert-success py-2">OTP Sent to mail!</div>
+                      <div>
+                        <label className="form-label">Enter 6-digit OTP</label>
+                        <input type="text" name="otp" className="form-control" value={pwdData.otp} onChange={handlePwdChange} placeholder="123456" />
+                      </div>
+                      <div>
+                        <label className="form-label">New Password</label>
+                        <input type="password" name="new" className="form-control" value={pwdData.new} onChange={handlePwdChange} />
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="btn btn-secondary" onClick={() => setIsPasswordModalOpen(false)}>Cancel</button>
+              {/* Show Save button if mode is 'current' OR (mode is 'otp' AND otp has been sent) */}
+              {(pwdMode === 'current' || (pwdMode === 'otp' && otpSent)) && (
+                <button type="button" className="btn btn-primary" onClick={handleSubmitPassword}>Change Password</button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+    </div >
   )
 }
 
