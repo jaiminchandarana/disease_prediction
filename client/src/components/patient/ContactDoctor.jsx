@@ -35,9 +35,9 @@ const ContactDoctor = () => {
   const filteredDoctors = doctors.filter(doctor => {
     const spec = (doctor.specialization || doctor.department || '').toLowerCase()
     const matchesSearch = doctor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         spec.includes(searchQuery.toLowerCase())
-    const matchesSpecialty = selectedSpecialty === '' || selectedSpecialty === 'All Specialties' || 
-                            spec === selectedSpecialty.toLowerCase()
+      spec.includes(searchQuery.toLowerCase())
+    const matchesSpecialty = selectedSpecialty === '' || selectedSpecialty === 'All Specialties' ||
+      spec === selectedSpecialty.toLowerCase()
     return matchesSearch && matchesSpecialty
   })
 
@@ -110,8 +110,8 @@ const ContactDoctor = () => {
   }, [])
 
   const renderDoctorCard = (doctor) => (
-    <div 
-      key={doctor.id} 
+    <div
+      key={doctor.id}
       className={`card doctor-card mb-3 ${selectedDoctor?.id === doctor.id ? 'border-primary' : ''}`}
       style={{ cursor: 'pointer' }}
       onClick={() => handleDoctorSelect(doctor)}
@@ -126,7 +126,7 @@ const ContactDoctor = () => {
               <span className={`badge ${doctor.status === 'active' ? 'bg-success' : 'bg-secondary'}`}>{doctor.status || 'active'}</span>
             </div>
           </div>
-          
+
           <div className="col-md-6">
             <h6 className="mb-1 fw-bold">{doctor.name}</h6>
             <p className="text-primary mb-1">{doctor.specialization || doctor.department || 'General'}</p>
@@ -140,7 +140,7 @@ const ContactDoctor = () => {
               <span className="fw-bold text-success">₹{doctor.consultation_fee || 0}</span>
               <small className="text-muted"> / consultation</small>
             </div>
-            <button 
+            <button
               className={`btn btn-sm ${selectedDoctor?.id === doctor.id ? 'btn-primary' : 'btn-outline-primary'}`}
             >
               {selectedDoctor?.id === doctor.id ? 'Selected' : 'Select Doctor'}
@@ -156,7 +156,7 @@ const ContactDoctor = () => {
       <div className="card-header bg-white border-0 py-3">
         <div className="d-flex justify-content-between align-items-center">
           <h5 className="mb-0 fw-bold">Contact Doctor</h5>
-          <button 
+          <button
             className="btn btn-outline-secondary btn-sm"
             onClick={() => setShowFilters(!showFilters)}
           >
@@ -183,7 +183,7 @@ const ContactDoctor = () => {
               </span>
             </div>
           </div>
-          
+
           <div className="col-md-4">
             <select
               className="form-select"
@@ -235,7 +235,7 @@ const ContactDoctor = () => {
         {/* Doctors List */}
         <div className="mb-4">
           <h6 className="fw-bold mb-3">Available Doctors ({filteredDoctors.length})</h6>
-          
+
           {filteredDoctors.length === 0 ? (
             <div className="text-center py-4">
               <FaUserMd size={48} className="text-muted mb-3" />
@@ -252,7 +252,7 @@ const ContactDoctor = () => {
         {selectedDoctor && (
           <div className="bg-light rounded p-4">
             <h6 className="fw-bold mb-3">Book Appointment with {selectedDoctor.name}</h6>
-            
+
             <div className="row g-3 mb-3">
               <div className="col-md-4">
                 <label className="form-label fw-semibold">Appointment Type</label>
@@ -266,7 +266,6 @@ const ContactDoctor = () => {
                       value="online"
                       checked={appointmentType === 'online'}
                       onChange={(e) => setAppointmentType(e.target.value)}
-                      disabled={!selectedDoctor.isOnline}
                     />
                     <label className="form-check-label" htmlFor="online">
                       <FaVideo className="me-1" />
@@ -332,7 +331,7 @@ const ContactDoctor = () => {
                   <small className="text-muted d-block">Online consultation fee</small>
                 )}
               </div>
-              
+
               <div>
                 <button
                   className="btn btn-outline-secondary me-2"
