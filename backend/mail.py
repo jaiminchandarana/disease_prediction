@@ -2,9 +2,10 @@ import yagmail
 import os
 
 def get_logo_path():
-    # robustly find the logo
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(base_dir, 'logo', 'Ayurix-logo.png')
+    # Pointing to client/src/assets/logo.jpg as requested
+    # Assuming backend is at .../backend, so we go up one level then client/src/assets
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) # Go to project root (parent of backend)
+    return os.path.join(base_dir, 'client', 'src', 'assets', 'logo.jpg')
 
 def send_credential(email, password):
     sender_email = '24mcajai005@ldce.ac.in'

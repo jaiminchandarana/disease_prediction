@@ -1,5 +1,6 @@
 import React from "react";
-import { DNAWavyBackground } from "./DNAWavyBackground"; // Adjust path if needed
+import { DNAWavyBackground } from "./DNAWavyBackground";
+import heartImg from '../assets/heart.png'
 
 const About = () => {
   return (
@@ -19,11 +20,12 @@ const About = () => {
       {/* Main Content */}
       <div className="container position-relative" style={{ zIndex: 1 }}>
         <div className="row align-items-center">
-          <div className="col-lg-6 mb-4 mb-lg-0">
+          <div className="col-lg-6 mb-4 mb-lg-0 text-center">
             <img
-              src="/api/placeholder/600/400"
-              alt="Healthcare team"
-              className="img-fluid rounded-3 shadow"
+              src={heartImg}
+              alt="Healthcare Heart"
+              className="img-fluid"
+              style={{ maxHeight: '400px', objectFit: 'contain' }}
             />
           </div>
           <div className="col-lg-6">

@@ -243,21 +243,21 @@ const Navbar = () => {
               {/* Search Bar (for dashboard pages) */}
               {isDashboard && (
                 <div className="mx-auto d-none d-lg-block position-relative" style={{ maxWidth: '400px', width: '100%' }}>
-                  <div className="input-group">
-                    <span className="input-group-text bg-white border-end-0">
-                      <FaSearch className="text-muted" />
-                    </span>
+                  <div className="input-group position-relative">
+                    {/* Icon absolutely positioned */}
+                    <FaSearch className="position-absolute text-muted" style={{ left: '15px', top: '50%', transform: 'translateY(-50%)', zIndex: 10 }} />
+
                     {/* Dummy hidden input to fool password managers */}
                     <input type="text" style={{ display: 'none' }} name="dummy_search_user" />
                     <input type="password" style={{ display: 'none' }} name="dummy_search_pass" />
 
                     <input
                       ref={searchRef}
-                      type="search" // changed from text to search for better semantics
-                      className="form-control rounded-pill border-0 bg-light ps-3 pe-5 py-2" // Added py-2 for better height
+                      type="search"
+                      className="form-control rounded-pill border-0 bg-light ps-5 pe-4 py-2" // ps-5 to make room for icon
                       placeholder="Search..."
                       value={searchQuery}
-                      onChange={handleSearchChange}
+                      onChange={(e) => handleSearch(e.target.value)}
                       onFocus={(e) => {
                         e.target.removeAttribute('readonly');
                         setShowSearchResults(true);
@@ -265,8 +265,8 @@ const Navbar = () => {
                       name="site_global_search"
                       id="site_global_search"
                       autoComplete="off"
-                      readOnly // effective anti-autofill
-                      style={{ fontSize: '14px', width: '100%', outline: 'none', boxShadow: 'none' }} // Ensure no outline
+                      readOnly
+                      style={{ fontSize: '14px', width: '100%', outline: 'none', boxShadow: 'none' }}
                     />
                     {searchQuery && (
                       <button

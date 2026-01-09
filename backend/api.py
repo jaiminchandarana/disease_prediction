@@ -27,7 +27,7 @@ if os.path.exists(gtk3_path):
 otp_store = {}
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": ["https://ayurix.vercel.app","http://localhost:5173", "http://localhost:5174", "http://localhost:3000"], "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"], "allow_headers": ["Content-Type", "Authorization"], "supports_credentials": True}})
+CORS(app, resources={r"/*": {"origins": ["https://ayurix.vercel.app","http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:5176", "http://localhost:3000"], "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"], "allow_headers": ["Content-Type", "Authorization"], "supports_credentials": True}})
 
 @app.route('/')
 def home():
