@@ -694,14 +694,18 @@ def admin_overview():
 
         # Counts
         # Registered patients: unique REGISTERED patients (exist in role) who have a booking
-        # Joining 'role p' ensures we only count patients who are actually registered in the system
+        # Robust doctor join
+        # Counts
+        # Registered patients: unique REGISTERED patients (exist in role) who have a booking
+        # Check if Doctor OR Patient is under this admin
         cur.execute("""
-            SELECT COUNT(DISTINCT p.email) 
+            SELECT COUNT(DISTINCT b.name) 
             FROM booking b
-            JOIN role d ON d.full_name = b.doctor
+            LEFT JOIN role d ON (d.full_name = b.doctor OR LEFT(d.full_name, 20) = b.doctor OR LEFT(d.full_name, 10) = b.doctor)
             JOIN role p ON p.full_name = b.name
             WHERE (d.admin_id = %s OR d.id = %s)
-        """, (admin_token, admin_token))
+            OR (p.admin_id = %s)
+        """, (admin_token, admin_token, admin_token))
         patients_count_row = cur.fetchone()
         patients_count = patients_count_row[0] if patients_count_row else 0
 
@@ -710,13 +714,14 @@ def admin_overview():
         doctors_count_row = cur.fetchone()
         doctors_count = doctors_count_row[0] if doctors_count_row else 0
 
-        # Total Bookings: bookings with doctors under this admin OR admin themselves
+        # Total Bookings: bookings with doctors under this admin OR admin themselves OR by patients under this admin
         cur.execute("""
             SELECT COUNT(*) 
             FROM booking b
-            JOIN role d ON d.full_name = b.doctor
-            WHERE (d.admin_id = %s OR d.id = %s)
-        """, (admin_token, admin_token))
+            LEFT JOIN role d ON (d.full_name = b.doctor OR LEFT(d.full_name, 20) = b.doctor OR LEFT(d.full_name, 10) = b.doctor)
+            LEFT JOIN role p ON p.full_name = b.name
+            WHERE (d.admin_id = %s OR d.id = %s) OR (p.admin_id = %s)
+        """, (admin_token, admin_token, admin_token))
         bookings_count_row = cur.fetchone()
         bookings_count = bookings_count_row[0] if bookings_count_row else 0
 
@@ -731,6 +736,7 @@ def admin_overview():
             OR p.doctor IN (
                 SELECT full_name FROM role WHERE (admin_id = %s OR id = %s)
             )
+            OR p.id IN (SELECT id FROM role WHERE admin_id = %s OR id = %s)
         """, (admin_token, admin_token, admin_token, admin_token))
         predictions_count_row = cur.fetchone()
         predictions_count = predictions_count_row[0] if predictions_count_row else 0
@@ -771,7 +777,7 @@ def admin_analytics():
             SELECT TO_CHAR(b.appointment, 'Mon') as month, DATE_TRUNC('month', b.appointment) as m,
                    COUNT(*)
             FROM booking b
-            JOIN role d ON d.full_name = b.doctor
+            JOIN role d ON (d.full_name = b.doctor OR LEFT(d.full_name, 20) = b.doctor OR LEFT(d.full_name, 10) = b.doctor)
             WHERE (d.admin_id = %s OR d.id = %s) AND b.appointment IS NOT NULL
             GROUP BY 1,2
             ORDER BY m DESC
@@ -786,16 +792,17 @@ def admin_analytics():
             SELECT TO_CHAR(date, 'Mon') as month, DATE_TRUNC('month', date) as m,
                    COUNT(*)
             FROM prediction p
-            WHERE p.doctor IN (
+            WHERE (p.doctor IN (
                 SELECT LEFT(full_name, 10) 
                 FROM role 
                 WHERE (admin_id = %s OR id = %s)
             )
+            OR p.id IN (SELECT id FROM role WHERE admin_id = %s OR id = %s))
             AND p.date IS NOT NULL
             GROUP BY 1,2
             ORDER BY m DESC
             LIMIT 6
-            """, (admin_token, admin_token))
+            """, (admin_token, admin_token, admin_token, admin_token))
         prediction_rows = cur.fetchall()
         predictions = [{ 'month': r[0], 'predictions': r[2] } for r in reversed(prediction_rows)]
 
@@ -820,16 +827,19 @@ def admin_patients():
             return jsonify({'success': False, 'error': 'Unauthorized'}), 403
             
         # Unique patients who booked with valid doctors under this admin
-        # Using DISTINCT ON (email) to strictly ensure 1 row per patient email
+        # Unique patients who booked with valid doctors under this admin
+        # Unique patients who booked with valid doctors under this admin OR are registered under this admin
+        # Using DISTINCT ON (full_name) to collapse duplicate accounts with same name into one entry
         cur.execute(
             """
-            SELECT DISTINCT ON (p.email) p.full_name, p.email, p.phone, p.address
+            SELECT DISTINCT ON (p.full_name) p.full_name, p.email, p.phone, p.address
             FROM booking b
-            JOIN role d ON d.full_name = b.doctor AND (d.admin_id = %s OR d.id = %s)
+            LEFT JOIN role d ON (d.full_name = b.doctor OR LEFT(d.full_name, 20) = b.doctor OR LEFT(d.full_name, 10) = b.doctor)
             JOIN role p ON p.full_name = b.name
-            ORDER BY p.email ASC
+            WHERE (d.admin_id = %s OR d.id = %s) OR (p.admin_id = %s)
+            ORDER BY p.full_name ASC
             """,
-            (admin_token, admin_token)
+            (admin_token, admin_token, admin_token)
         )
         rows = cur.fetchall()
         patients = [{'name': r[0], 'email': r[1], 'phone': r[2], 'address': r[3]} for r in rows]
@@ -871,15 +881,15 @@ def profile_stats():
             cur.execute("SELECT COUNT(*) FROM role WHERE role='doctor' AND admin_id=%s", (user_id,))
             stats['doctors'] = cur.fetchone()[0]
             
-            # Count Patients (distinct people who booked with this admin's doctors or admin)
+            # Count Patients (distinct people who booked with this admin's doctors or admin OR are admin's patients)
             # Strictly counts registered users (in role table)
             cur.execute("""
-                SELECT COUNT(DISTINCT p.email) 
+                SELECT COUNT(DISTINCT b.name) 
                 FROM booking b
-                JOIN role d ON d.full_name = b.doctor
+                LEFT JOIN role d ON (d.full_name = b.doctor OR LEFT(d.full_name, 20) = b.doctor OR LEFT(d.full_name, 10) = b.doctor)
                 JOIN role p ON p.full_name = b.name
-                WHERE (d.admin_id = %s OR d.id = %s)
-            """, (user_id, user_id))
+                WHERE (d.admin_id = %s OR d.id = %s) OR (p.admin_id = %s)
+            """, (user_id, user_id, user_id))
             stats['users'] = cur.fetchone()[0]
             
             # Count Predictions (from prediction table, robust name match)
@@ -890,8 +900,9 @@ def profile_stats():
                     SELECT LEFT(full_name, 10) FROM role WHERE (admin_id = %s OR id = %s)
                 ) OR p.doctor IN (
                     SELECT full_name FROM role WHERE (admin_id = %s OR id = %s)
-                )
-            """, (user_id, user_id, user_id, user_id))
+                ) 
+                OR p.id IN (SELECT id FROM role WHERE admin_id = %s OR id = %s)
+            """, (user_id, user_id, user_id, user_id, user_id, user_id))
             stats['predictions'] = cur.fetchone()[0]
 
         elif role == 'doctor':
@@ -922,14 +933,18 @@ def admin_bookings():
             cur.close(); conn.close()
             return jsonify({'success': False, 'error': 'Unauthorized'}), 403
         # Bookings under doctors registered by this admin OR admin themselves (if they act as a doctor)
+        # Robust join: Match doctor name by unique full_name OR truncated match (if legacy data exists)
+        # Also include bookings where the PATIENT is registered under this admin
         cur.execute(
             """
             SELECT b.booking_id, b.name, b.doctor, b.department, b.appointment, b.status
             FROM booking b
-            JOIN role r ON r.full_name = b.doctor AND (r.admin_id = %s OR r.id = %s)
+            LEFT JOIN role r ON (r.full_name = b.doctor OR LEFT(r.full_name, 20) = b.doctor OR LEFT(r.full_name, 10) = b.doctor) 
+            LEFT JOIN role p ON p.full_name = b.name
+            WHERE (r.admin_id = %s OR r.id = %s) OR (p.admin_id = %s)
             ORDER BY b.appointment DESC
             """,
-            (admin_token, admin_token)
+            (admin_token, admin_token, admin_token)
         )
         rows = cur.fetchall()
         bookings = [{
