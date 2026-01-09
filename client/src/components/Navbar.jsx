@@ -242,22 +242,31 @@ const Navbar = () => {
 
               {/* Search Bar (for dashboard pages) */}
               {isDashboard && (
-                <div className="mx-auto d-none d-lg-block position-relative" style={{ maxWidth: '400px', width: '100%' }} ref={searchRef}>
+                <div className="mx-auto d-none d-lg-block position-relative" style={{ maxWidth: '400px', width: '100%' }}>
                   <div className="input-group">
                     <span className="input-group-text bg-white border-end-0">
                       <FaSearch className="text-muted" />
                     </span>
-                    {/* Dummy hidden input to prevent autofill */}
-                    <input type="password" style={{ display: 'none' }} />
+                    {/* Dummy hidden input to fool password managers */}
+                    <input type="text" style={{ display: 'none' }} name="dummy_search_user" />
+                    <input type="password" style={{ display: 'none' }} name="dummy_search_pass" />
+
                     <input
-                      type="text"
-                      className="form-control border-start-0 ps-0"
+                      ref={searchRef}
+                      type="search" // changed from text to search for better semantics
+                      className="form-control rounded-pill border-0 bg-light ps-3 pe-5 py-2" // Added py-2 for better height
                       placeholder="Search..."
                       value={searchQuery}
-                      name="unique_nav_search_disabled_autofill"
-                      autoComplete="new-password"
-                      onChange={(e) => handleSearch(e.target.value)}
-                      onFocus={() => searchQuery && setShowSearchResults(true)}
+                      onChange={handleSearchChange}
+                      onFocus={(e) => {
+                        e.target.removeAttribute('readonly');
+                        setShowSearchResults(true);
+                      }}
+                      name="site_global_search"
+                      id="site_global_search"
+                      autoComplete="off"
+                      readOnly // effective anti-autofill
+                      style={{ fontSize: '14px', width: '100%', outline: 'none', boxShadow: 'none' }} // Ensure no outline
                     />
                     {searchQuery && (
                       <button
@@ -344,9 +353,9 @@ const Navbar = () => {
                         </div>
                       ) : (
                         <div>
-                          {notifications.map((notification) => (
+                          {notifications.map((notification, index) => (
                             <button
-                              key={notification.id}
+                              key={`${notification.id}-${index}`}
                               className={`dropdown-item border-0 bg-transparent w-100 text-start px-3 py-2 ${!notification.read ? 'bg-light' : ''}`}
                               style={{ borderBottom: '1px solid #f0f0f0' }}
                               onClick={() => handleNotificationClick(notification)}

@@ -3,7 +3,7 @@ import axios from 'axios'
 // Create axios instance
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || (import.meta.env.MODE === 'production' ? 'https://disease-prediction-3z87.onrender.com/api' : 'http://localhost:5000/api'),
-  timeout: 10000,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },

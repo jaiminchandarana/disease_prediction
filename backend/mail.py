@@ -1,14 +1,25 @@
 import yagmail
+import os
+
+def get_logo_path():
+    # robustly find the logo
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base_dir, 'logo', 'Ayurix-logo.png')
 
 def send_credential(email, password):
     sender_email = '24mcajai005@ldce.ac.in'
     app_password = 'hewxzzsykgzcqbuj'
     yag = yagmail.SMTP(user=sender_email, password=app_password)
-    logo_path = "C:/Users/Jaimin/OneDrive/Desktop/disease prediction/backend/logo/Ayurix-removebg-preview.png"
+    logo_path = get_logo_path()
 
     try:
+        if os.path.exists(logo_path):
+            img_content = yagmail.inline(logo_path)
+        else:
+            img_content = "" # Fallback if logo missing
+
         contents = [
-            yagmail.inline(logo_path),
+            img_content,
             f"""
             <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f6f9; border-radius: 8px; color: #333;">
                 <div style="text-align: center;">
@@ -53,11 +64,16 @@ def send_query(email, subject, query_id):
     sender_email = '24mcajai005@ldce.ac.in'
     app_password = 'hewxzzsykgzcqbuj'
     yag = yagmail.SMTP(user=sender_email, password=app_password)
-    logo_path = "C:/Users/Jaimin/OneDrive/Desktop/disease prediction/backend/logo/Ayurix-removebg-preview.png"
+    logo_path = get_logo_path()
 
     try:
+        if os.path.exists(logo_path):
+            img_content = yagmail.inline(logo_path)
+        else:
+            img_content = ""
+            
         contents = [
-            yagmail.inline(logo_path),
+            img_content,
             f"""
             <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f6f9; border-radius: 8px; color: #333;">
                 <div style="text-align: center;">
@@ -97,11 +113,16 @@ def send_otp(email, code):
     sender_email = '24mcajai005@ldce.ac.in'
     app_password = 'hewxzzsykgzcqbuj'
     yag = yagmail.SMTP(user=sender_email, password=app_password)
-    logo_path = "C:/Users/Jaimin/OneDrive/Desktop/disease prediction/backend/logo/Ayurix-removebg-preview.png"
+    logo_path = get_logo_path()
 
     try:
+        if os.path.exists(logo_path):
+            img_content = yagmail.inline(logo_path)
+        else:
+            img_content = ""
+
         contents = [
-            yagmail.inline(logo_path),
+            img_content,
             f"""
             <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f6f9; border-radius: 8px; color: #333;">
                 <div style="text-align: center;">

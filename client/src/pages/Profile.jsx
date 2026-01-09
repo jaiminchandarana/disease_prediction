@@ -6,7 +6,7 @@ import { authService } from '../services/api'
 import toast from 'react-hot-toast'
 
 const Profile = () => {
-  const { user, updateUser } = useAuth()
+  const { user, updateProfile } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
   const [loading, setLoading] = useState(false)
   const [adminQuickStats, setAdminQuickStats] = useState({ users: 0, predictions: 0 })
@@ -19,19 +19,39 @@ const Profile = () => {
   const [pwdMode, setPwdMode] = useState('current') // 'current' or 'otp'
   const [pwdData, setPwdData] = useState({ current: '', new: '', otp: '' })
   const [otpSent, setOtpSent] = useState(false)
+  const [otpTimer, setOtpTimer] = useState(0) // Timer in seconds
 
   const handlePwdChange = (e) => setPwdData({ ...pwdData, [e.target.name]: e.target.value })
 
+  // Timer Effect
+  useEffect(() => {
+    let interval
+    if (otpTimer > 0) {
+      interval = setInterval(() => {
+        setOtpTimer((prev) => prev - 1)
+      }, 1000)
+    }
+    return () => clearInterval(interval)
+  }, [otpTimer])
+
   const handleSendOtp = async () => {
+    if (otpTimer > 0) return
+
+    // OPTIMISTIC UPDATE: Show UI immediately
+    setOtpSent(true)
+    setOtpTimer(60)
+
     try {
       const res = await authService.sendOtp(user.email)
       if (res.success) {
-        setOtpSent(true)
         toast.success('OTP sent to ' + user.email)
       } else {
+        // Even if explicit failure, we keep the UI open but warn user
         toast.error(res.error || 'Failed to send OTP')
       }
-    } catch { toast.error('Error sending OTP') }
+    } catch {
+      toast.error('Error sending OTP')
+    }
   }
 
   const handleSubmitPassword = async () => {
@@ -75,15 +95,17 @@ const Profile = () => {
     }
   })
 
+  // Simplify onSubmit to just call context method
   const onSubmit = async (data) => {
     setLoading(true)
     try {
-      await authService.updateProfile({ ...data, id: user.id })
-      updateUser({ ...user, ...data })
-      setIsEditing(false)
-      toast.success('Profile updated successfully!')
+      // Use helper from AuthContext which handles state update and toast
+      const success = await updateProfile({ ...data, id: user.id })
+      if (success.success) {
+        setIsEditing(false)
+      }
     } catch (error) {
-      toast.error('Failed to update profile')
+      // AuthContext already toasts error
     } finally {
       setLoading(false)
     }
@@ -460,17 +482,7 @@ const Profile = () => {
                     </div>
                   </div>
 
-                  <div className="col-12">
-                    <div className="d-flex justify-content-between align-items-center p-3 bg-light rounded">
-                      <div>
-                        <h6 className="mb-1 fw-semibold">Two-Factor Authentication</h6>
-                        <small className="text-muted">Add an extra layer of security</small>
-                      </div>
-                      <button className="btn btn-outline-success btn-sm">
-                        Enable 2FA
-                      </button>
-                    </div>
-                  </div>
+
 
                   <div className="col-12">
                     <div className="d-flex justify-content-between align-items-center p-3 bg-light rounded">
@@ -520,15 +532,37 @@ const Profile = () => {
                     </li>
                   </ul>
 
+                  {/* Dummy inputs to fool autofill */}
+                  <input type="text" name="fakeusernameremembered" style={{ display: 'none' }} />
+                  <input type="password" name="fakepasswordremembered" style={{ display: 'none' }} />
+
                   {pwdMode === 'current' ? (
                     <div className="d-flex flex-column gap-3">
                       <div>
                         <label className="form-label">Current Password</label>
-                        <input type="password" name="current" className="form-control" value={pwdData.current} onChange={handlePwdChange} autoComplete="new-password" />
+                        <input
+                          type="password"
+                          name="current_pwd_no_fill"
+                          className="form-control"
+                          value={pwdData.current}
+                          onChange={(e) => setPwdData({ ...pwdData, current: e.target.value })}
+                          autoComplete="off"
+                          onFocus={(e) => e.target.removeAttribute('readonly')}
+                          readOnly
+                        />
                       </div>
                       <div>
                         <label className="form-label">New Password</label>
-                        <input type="password" name="new" className="form-control" value={pwdData.new} onChange={handlePwdChange} autoComplete="new-password" />
+                        <input
+                          type="password"
+                          name="new_pwd_no_fill"
+                          className="form-control"
+                          value={pwdData.new}
+                          onChange={(e) => setPwdData({ ...pwdData, new: e.target.value })}
+                          autoComplete="off"
+                          onFocus={(e) => e.target.removeAttribute('readonly')}
+                          readOnly
+                        />
                       </div>
                     </div>
                   ) : (
@@ -536,19 +570,45 @@ const Profile = () => {
                       {!otpSent ? (
                         <div className="text-center py-3">
                           <p>We will send a 6-digit OTP to <strong>{user.email}</strong></p>
-                          <button type="button" className="btn btn-primary" onClick={handleSendOtp}>Send OTP</button>
+                          <button
+                            type="button"
+                            className="btn btn-primary"
+                            onClick={handleSendOtp}
+                            disabled={otpTimer > 0}
+                          >
+                            {otpTimer > 0 ? `OTP not received? Try again in ${otpTimer}s` : 'Send OTP'}
+                          </button>
                         </div>
                       ) : (
                         <>
                           <div className="alert alert-success py-2">OTP Sent to mail!</div>
                           <div>
                             <label className="form-label">Enter 6-digit OTP</label>
-                            <input type="text" name="otp" className="form-control" value={pwdData.otp} onChange={handlePwdChange} placeholder="123456" />
+                            <input type="text" name="otp" className="form-control" value={pwdData.otp} onChange={(e) => setPwdData({ ...pwdData, otp: e.target.value })} placeholder="123456" />
                           </div>
                           <div>
                             <label className="form-label">New Password</label>
-                            <input type="password" name="new" className="form-control" value={pwdData.new} onChange={handlePwdChange} />
+                            <input
+                              type="password"
+                              name="new_pwd_otp_no_fill"
+                              className="form-control"
+                              value={pwdData.new}
+                              onChange={(e) => setPwdData({ ...pwdData, new: e.target.value })}
+                              autoComplete="off"
+                              readOnly
+                              onFocus={(e) => e.target.removeAttribute('readonly')}
+                            />
                           </div>
+                          {/* Resend option if timer expired, else show timer */}
+                          {otpTimer === 0 ? (
+                            <div className="text-end">
+                              <button type="button" className="btn btn-link btn-sm p-0" onClick={handleSendOtp}>Resend OTP</button>
+                            </div>
+                          ) : (
+                            <div className="text-end">
+                              <span className="text-muted small">Resend in {otpTimer}s</span>
+                            </div>
+                          )}
                         </>
                       )}
                     </div>
