@@ -19,17 +19,18 @@ const Navbar = () => {
   const notificationRef = useRef(null)
   const searchRef = useRef(null)
 
-  const [notifications, setNotifications] = useState(notificationService.getAll())
+  const [notifications, setNotifications] = useState(notificationService.getAll(user))
 
   const unreadCount = notifications.filter(n => !n.read).length
 
   // Sync notifications from localStorage across tabs and when others add
+  // Sync notifications from localStorage across tabs and when others add
   useEffect(() => {
-    const sync = () => setNotifications(notificationService.getAll())
+    const sync = () => setNotifications(notificationService.getAll(user))
     window.addEventListener('storage', sync)
     const interval = setInterval(sync, 2000)
     return () => { window.removeEventListener('storage', sync); clearInterval(interval) }
-  }, [])
+  }, [user])
 
   // Sample search data - replace with actual search API later
   const searchableItems = [
@@ -84,8 +85,11 @@ const Navbar = () => {
     setShowNotifications(next)
     if (next) {
       // mark all as read when opening dropdown
-      const updated = notificationService.markAllRead()
-      setNotifications(updated)
+      // We need to fetch latest first to ensure we don't overwrite
+      const updated = notificationService.markAllRead(user)
+      // Re-filter for display
+      const visible = notificationService.getAll(user)
+      setNotifications(visible)
     }
   }
 
@@ -345,11 +349,14 @@ const Navbar = () => {
                             >
                               <div className="d-flex align-items-start">
                                 <div className={`rounded-circle me-2 flex-shrink-0 ${notification.type === 'success' ? 'bg-success' :
-                                    notification.type === 'info' ? 'bg-info' : 'bg-primary'
+                                  notification.type === 'info' ? 'bg-info' : 'bg-primary'
                                   }`} style={{ width: '6px', height: '6px', marginTop: '5px' }}></div>
                                 <div className="flex-grow-1 overflow-hidden">
                                   <div className="fw-semibold small text-truncate">{notification.title}</div>
-                                  <div className="text-muted small text-truncate" style={{ fontSize: '11px' }}>{notification.message}</div>
+                                  <div className="text-muted small text-truncate" style={{ fontSize: '11px' }}>
+                                    {notification.doctorName && <span className="fw-bold text-primary me-1">[{notification.doctorName}]</span>}
+                                    {notification.message}
+                                  </div>
                                   <div className="text-muted" style={{ fontSize: '10px' }}>{notification.time}</div>
                                 </div>
                               </div>

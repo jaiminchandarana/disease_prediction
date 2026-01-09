@@ -175,11 +175,21 @@ export default api
 // Lightweight notifications service using localStorage (no backend changes)
 export const notificationService = {
   storageKey: 'notifications',
-  getAll: () => {
+  getAll: (currentUser) => {
     try {
       const raw = localStorage.getItem('notifications')
       const list = raw ? JSON.parse(raw) : []
-      return Array.isArray(list) ? list : []
+      if (!currentUser) return []
+
+      return list.filter(n => {
+        // 1. Basic check: if notification has a specific userId, match it
+        if (n.userId && n.userId === currentUser.id) return true
+
+        // 2. Admin check: if current user is admin, show notifications from their doctors (tagged with adminId)
+        if (currentUser.role === 'admin' && n.adminId === currentUser.id) return true
+
+        return false
+      })
     } catch {
       return []
     }
@@ -190,15 +200,42 @@ export const notificationService = {
     } catch { }
   },
   add: (notification) => {
-    const list = notificationService.getAll()
+    // notification object should include { userId, adminId, ... }
+    const raw = localStorage.getItem('notifications')
+    const list = raw ? JSON.parse(raw) : []
+
+    // Check for duplicates
     const exists = list.some(n => n.key && n.key === notification.key)
-    const toSave = exists ? list : [{ id: Date.now(), read: false, time: new Date().toISOString(), ...notification }, ...list].slice(0, 100)
-    notificationService.saveAll(toSave)
-    return toSave
-  },
-  markAllRead: () => {
-    const list = notificationService.getAll().map(n => ({ ...n, read: true }))
-    notificationService.saveAll(list)
+
+    if (!exists) {
+      const newItem = {
+        id: Date.now(),
+        read: false,
+        time: new Date().toISOString(),
+        ...notification
+      }
+      // Add to beginning, limit to 500 to prevent overflow
+      const updatedList = [newItem, ...list].slice(0, 500)
+      notificationService.saveAll(updatedList)
+      return updatedList
+    }
     return list
+  },
+  markAllRead: (currentUser) => {
+    // Only mark visible notifications as read
+    const raw = localStorage.getItem('notifications')
+    const list = raw ? JSON.parse(raw) : []
+
+    const updatedList = list.map(n => {
+      let isVisible = false
+      if (n.userId && n.userId === currentUser?.id) isVisible = true
+      if (currentUser?.role === 'admin' && n.adminId === currentUser?.id) isVisible = true
+
+      if (isVisible) return { ...n, read: true }
+      return n
+    })
+
+    notificationService.saveAll(updatedList)
+    return updatedList
   }
 }

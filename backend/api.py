@@ -152,7 +152,8 @@ def login():
                 'email': user[2],
                 'phone': user[3],
                 'role': user[5],
-                'address': user[6]
+                'address': user[6],
+                'admin_id': user[14] if len(user) > 14 else None
             }
             
             cur.close()

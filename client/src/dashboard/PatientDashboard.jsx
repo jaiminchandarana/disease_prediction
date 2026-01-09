@@ -57,6 +57,7 @@ const PatientDashboard = () => {
               key: `pred-${p.id}-${p.date}-${p.prediction}`,
               title: 'Prediction Completed',
               message: `${p.prediction} (${p.severity})`,
+              userId: user?.id, // Tag with current user ID for filtering
               type: 'primary'
             })
           })

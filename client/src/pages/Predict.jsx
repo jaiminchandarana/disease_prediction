@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Bot, Send, Image, FileText, Loader2, X, CheckCircle, AlertTriangle, Stethoscope, Phone, MapPin, Download, Share2, TrendingUp } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
 import { authService } from '../services/authService'
+import { notificationService } from '../services/api'
 
 // Toast notification component (replaces react-hot-toast)
 const Toast = ({ message, type, onClose }) => {
@@ -377,6 +378,15 @@ Type a number or describe your query.`
             confidence: confidence.toString(),
             doctor_name: ''
           })
+
+          // Add notification
+          notificationService.add({
+            key: `pred-${Date.now()}`,
+            title: 'New Prediction',
+            message: `${disease} detected (${severity})`,
+            type: severity === 'High' ? 'error' : 'success',
+            userId: user?.id
+          })
         } catch (saveError) {
           console.error('Error saving prediction:', saveError)
         }
@@ -429,6 +439,15 @@ Type a number or describe your query.`
         severity: severity,
         confidence: confidence.toString(),
         doctor_name: ''
+      })
+
+      // Add notification
+      notificationService.add({
+        key: `pred-${Date.now()}`,
+        title: 'New Prediction',
+        message: `${disease} detected (${severity})`,
+        type: severity === 'High' ? 'error' : 'success',
+        userId: user?.id
       })
     } catch (saveError) {
       console.error('Error saving prediction:', saveError)
@@ -532,6 +551,17 @@ Type a number or describe your query.`
             confidence: confidence.toString(),
             doctor_name: user?.role === 'doctor' ? (user?.name || '') : ''
           })
+
+          // Add notification with Admin tagging for doctors
+          notificationService.add({
+            key: `pred-doc-${Date.now()}`,
+            title: 'Clinical Assessment',
+            message: `Assessment for ${data.primaryConcern?.substring(0, 20)}...: ${disease}`,
+            type: 'info',
+            userId: user?.id,
+            adminId: user?.admin_id, // Tag with admin_id so admin sees it
+            doctorName: user?.role === 'doctor' ? user.name : undefined
+          })
         } catch (saveError) {
           console.error('Error saving prediction:', saveError)
         }
@@ -591,6 +621,17 @@ Type a number or describe your query.`
         severity: severity,
         confidence: confidence.toString(),
         doctor_name: user?.role === 'doctor' ? (user?.name || '') : ''
+      })
+
+      // Add notification with Admin tagging for doctors
+      notificationService.add({
+        key: `pred-doc-${Date.now()}`,
+        title: 'Clinical Assessment',
+        message: `Assessment for ${data.primaryConcern?.substring(0, 20)}...: ${disease}`,
+        type: 'info',
+        userId: user?.id,
+        adminId: user?.admin_id, // Tag with admin_id so admin sees it
+        doctorName: user?.role === 'doctor' ? user.name : undefined
       })
     } catch (saveError) {
       console.error('Error saving prediction:', saveError)
