@@ -39,8 +39,8 @@ def hash_password(password):
 def register():
     try:
         # Get parameters from query string
-        full_name = request.args.get('name')
-        email = request.args.get('email')
+        full_name = request.args.get('name', '').strip()
+        email = request.args.get('email', '').strip().lower()
         password = request.args.get('password')
         address = request.args.get('address')
         phone = request.args.get('phone')
@@ -113,9 +113,10 @@ def register():
 def login():
     try:
         # Get parameters from query string
-        identifier = request.args.get('identifier')
-        password = request.args.get('password')
-        role = request.args.get('role')
+        # Get parameters from query string
+        identifier = request.args.get('identifier', '').strip()
+        password = request.args.get('password', '').strip()
+        role = request.args.get('role', '').strip()
         
         # Validate required fields
         if not all([identifier, password, role]):
@@ -132,9 +133,13 @@ def login():
         cur = conn.cursor()
         
         # Check if user exists with email/ID and password
+        # Check if user exists with email/ID and password
+        # Handle case internal consistency for email
+        identifier_lower = identifier.lower()
+        
         cur.execute(
-            "SELECT * FROM role WHERE (email = %s OR id = %s) AND password = %s AND role = %s",
-            (identifier, identifier, hashed_password, role)
+            "SELECT * FROM role WHERE (LOWER(email) = %s OR id = %s) AND password = %s AND role = %s",
+            (identifier_lower, identifier, hashed_password, role)
         )
         
         user = cur.fetchone()

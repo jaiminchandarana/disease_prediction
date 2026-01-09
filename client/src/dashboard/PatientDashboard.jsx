@@ -28,6 +28,7 @@ const PatientDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterBy, setFilterBy] = useState('all')
   const [sortBy, setSortBy] = useState('date')
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   // Fetch predictions from API
   useEffect(() => {
@@ -209,7 +210,7 @@ const PatientDashboard = () => {
     )
   }
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+
 
   return (
     <div className="dashboard-container">
