@@ -117,14 +117,11 @@ def send_otp(email, code):
     logo_path = get_logo_path()
 
     try:
+        contents = []
         if os.path.exists(logo_path):
-            img_content = yagmail.inline(logo_path)
-        else:
-            img_content = ""
-
-        contents = [
-            img_content,
-            f"""
+            contents.append(yagmail.inline(logo_path))
+        
+        contents.append(f"""
             <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f6f9; border-radius: 8px; color: #333;">
                 <div style="text-align: center;">
                     <h2 style="color: #0077b6;">Your One-Time Password (OTP)</h2>
@@ -143,8 +140,8 @@ def send_otp(email, code):
                     <p style="font-size: 12px; color: #aaa;">© 2025 Ayurix. Empowering Prevention Through Prediction.</p>
                 </div>
             </div>
-            """
-        ]
+            """)
+
 
         yag.send(
             to=email,

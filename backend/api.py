@@ -693,13 +693,12 @@ def admin_overview():
             return jsonify({'success': False, 'error': 'Unauthorized'}), 403
 
         # Counts
-        # Counts
         # Registered patients: unique patients who have a booking with a doctor under this admin
         cur.execute("""
-            SELECT COUNT(DISTINCT b.name) 
+            SELECT COUNT(DISTINCT b.patient_id) 
             FROM booking b
-            JOIN role r ON r.role = 'doctor' AND r.full_name = b.doctor
-            WHERE r.admin_id = %s
+            JOIN role d ON d.id = b.doctor_id
+            WHERE d.admin_id = %s
         """, (admin_token,))
         patients_count_row = cur.fetchone()
         patients_count = patients_count_row[0] if patients_count_row else 0
@@ -713,18 +712,23 @@ def admin_overview():
         cur.execute("""
             SELECT COUNT(*) 
             FROM booking b
-            JOIN role r ON r.role = 'doctor' AND r.full_name = b.doctor
-            WHERE r.admin_id = %s
+            JOIN role d ON d.id = b.doctor_id
+            WHERE d.admin_id = %s
         """, (admin_token,))
         bookings_count_row = cur.fetchone()
         bookings_count = bookings_count_row[0] if bookings_count_row else 0
 
         # Total Predictions: predictions made by doctors under this admin
+        # Using booking table as proxy if prediction isn't directly linked to doctor in prediction table safely
+        # But prediction table exists. Let's see if prediction table has doctor_id?
+        # Standard schema usually has doctor_id. If not, name match is fallback.
+        # But get_admin_prediction_cards used JOIN booking b ... b.prediction.
+        # Let's count non-null predictions in booking for reliability via booking link
         cur.execute("""
             SELECT COUNT(*) 
-            FROM prediction p
-            JOIN role r ON r.role = 'doctor' AND r.full_name = p.doctor
-            WHERE r.admin_id = %s
+            FROM booking b
+            JOIN role d ON d.id = b.doctor_id
+            WHERE d.admin_id = %s AND b.prediction IS NOT NULL
         """, (admin_token,))
         predictions_count_row = cur.fetchone()
         predictions_count = predictions_count_row[0] if predictions_count_row else 0
@@ -765,8 +769,8 @@ def admin_analytics():
             SELECT TO_CHAR(b.appointment, 'Mon') as month, DATE_TRUNC('month', b.appointment) as m,
                    COUNT(*)
             FROM booking b
-            JOIN role r ON r.role = 'doctor' AND r.full_name = b.doctor AND r.admin_id = %s
-            WHERE b.appointment IS NOT NULL
+            JOIN role d ON d.id = b.doctor_id
+            WHERE d.admin_id = %s AND b.appointment IS NOT NULL
             GROUP BY 1,2
             ORDER BY m DESC
             LIMIT 6
@@ -774,14 +778,15 @@ def admin_analytics():
         booking_rows = cur.fetchall()
         bookings = [{ 'month': r[0], 'bookings': r[2] } for r in reversed(booking_rows)]
 
-        # Monthly predictions count (last 6 months) for doctors under this admin (by doctor name match)
+        # Monthly predictions count (last 6 months) 
+        # Using booking table's prediction column if available and safer
         cur.execute(
             """
-            SELECT TO_CHAR(p.date, 'Mon') as month, DATE_TRUNC('month', p.date) as m,
+            SELECT TO_CHAR(b.appointment, 'Mon') as month, DATE_TRUNC('month', b.appointment) as m,
                    COUNT(*)
-            FROM prediction p
-            JOIN role r ON r.role = 'doctor' AND p.doctor = r.full_name AND r.admin_id = %s
-            WHERE p.date IS NOT NULL
+            FROM booking b
+            JOIN role d ON d.id = b.doctor_id
+            WHERE d.admin_id = %s AND b.prediction IS NOT NULL AND b.appointment IS NOT NULL
             GROUP BY 1,2
             ORDER BY m DESC
             LIMIT 6
@@ -793,6 +798,7 @@ def admin_analytics():
         return jsonify({'success': True, 'chart': { 'bookings': bookings, 'predictions': predictions }}), 200
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
 
 @app.route('/api/admin/patients', methods=['GET'])
 def admin_patients():
@@ -807,13 +813,28 @@ def admin_patients():
         if not role_row or role_row[0] != 'admin':
             cur.close(); conn.close()
             return jsonify({'success': False, 'error': 'Unauthorized'}), 403
-        # Unique patients (name/email/phone/address) who booked with any doctor under this admin
+            
+        # Unique patients who booked with valid doctors under this admin
+        # Using IDs for join (safer than names)
+        # booking.doctor_id -> role.id (doctor)
+        # booking.patient_id -> role.id (patient) - assuming role table has patients
+        # But wait, looking at get_admin_prediction_cards, it joins 'patient' table?
+        # Let's check if 'patient' table exists separate from 'role'?
+        # Line 1323: JOIN patient p ON b.patient_id = p.patient_id
+        # So there IS a patient table.
+        # But commonly we might use role table for auth.
+        # Let's assume 'role' table is the main user table for now as per 'register' logic.
+        # If 'patient' table is separate, we might need to join that.
+        # From register endpoint (line 81), patients are inserted into 'role'.
+        # So 'patient' table might be legacy or specific details?
+        # Let's try joining 'role' first as it contains email/phone/address.
+        
         cur.execute(
             """
             SELECT DISTINCT p.full_name, p.email, p.phone, p.address
             FROM booking b
-            JOIN role r ON r.role='doctor' AND r.full_name = b.doctor AND r.admin_id = %s
-            JOIN role p ON p.role='patient' AND p.full_name = b.name
+            JOIN role d ON d.id = b.doctor_id AND d.admin_id = %s
+            JOIN role p ON p.id = b.patient_id
             ORDER BY 1 ASC
             """,
             (admin_token,)
@@ -822,6 +843,65 @@ def admin_patients():
         patients = [{'name': r[0], 'email': r[1], 'phone': r[2], 'address': r[3]} for r in rows]
         cur.close(); conn.close()
         return jsonify({'success': True, 'patients': patients}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/stats/profile', methods=['GET'])
+def profile_stats():
+    try:
+        user_id = request.args.get('user_id')
+        role = request.args.get('role')
+        
+        if not user_id or not role:
+             return jsonify({'success': False, 'error': 'Missing params'}), 400
+             
+        conn = connection()
+        cur = conn.cursor()
+        stats = {}
+        
+        if role == 'patient':
+            # Count predictions
+            cur.execute("SELECT COUNT(*) FROM prediction WHERE id = %s", (user_id,))
+            stats['predictions'] = cur.fetchone()[0]
+            # Count appointments
+            cur.execute("SELECT COUNT(*) FROM booking WHERE patient_id = %s", (user_id,))
+            stats['appointments'] = cur.fetchone()[0]
+            
+        elif role == 'admin':
+            # Count Doctors
+            cur.execute("SELECT COUNT(*) FROM role WHERE role='doctor' AND admin_id=%s", (user_id,))
+            stats['doctors'] = cur.fetchone()[0]
+            
+            # Count Patients (distinct people who booked with this admin's doctors)
+            # Using similar logic to admin_overview
+            cur.execute("""
+                SELECT COUNT(DISTINCT b.patient_id) 
+                FROM booking b
+                JOIN role d ON d.id = b.doctor_id
+                WHERE d.admin_id = %s
+            """, (user_id,))
+            stats['users'] = cur.fetchone()[0]
+            
+            # Count Predictions/Consultations (Total bookings)
+            cur.execute("""
+                SELECT COUNT(*) 
+                FROM booking b
+                JOIN role d ON d.id = b.doctor_id
+                WHERE d.admin_id = %s
+            """, (user_id,))
+            stats['predictions'] = cur.fetchone()[0]
+
+        elif role == 'doctor':
+             # Count Unique Patients
+             cur.execute("SELECT COUNT(DISTINCT patient_id) FROM booking WHERE doctor_id = %s", (user_id,))
+             stats['patients'] = cur.fetchone()[0]
+             
+             # Count Consultations (Completed bookings)
+             cur.execute("SELECT COUNT(*) FROM booking WHERE doctor_id = %s AND status = 'completed'", (user_id,))
+             stats['consultations'] = cur.fetchone()[0] 
+            
+        cur.close(); conn.close()
+        return jsonify({'success': True, 'stats': stats}), 200
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 

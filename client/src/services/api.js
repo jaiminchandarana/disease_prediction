@@ -157,6 +157,17 @@ export const authService = {
     }
   },
 
+  // Get profile stats
+  getProfileStats: async (userId, role) => {
+    try {
+      const response = await api.get(`/stats/profile?user_id=${userId}&role=${role}`)
+      return response
+    } catch (error) {
+      console.error("Error fetching stats:", error)
+      return { success: false, stats: {} }
+    }
+  },
+
   // Update profile
   updateProfile: async (userData) => {
     try {

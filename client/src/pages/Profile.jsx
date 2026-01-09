@@ -111,90 +111,45 @@ const Profile = () => {
     }
   }
 
+  // Load stats from DB
   useEffect(() => {
-    const loadQuickStats = async () => {
-      if (user?.role !== 'admin') return
-      const adminToken = localStorage.getItem('token')
-      // Doctors (users) under admin
-      let usersCount = 0
+    const loadStats = async () => {
+      if (!user?.id) return
+
       try {
-        const docs = await api.get(`/auth/get-all-doctors?admin_token=${adminToken}`)
-        if (docs.success) usersCount = (docs.doctors || []).length
-      } catch { }
-      // Predictions: admin self + all doctors under admin
-      let predCount = 0
-      try {
-        const adminPred = await api.get(`/predictions/get?user_id=${adminToken}`)
-        if (adminPred.success) predCount += (adminPred.count || adminPred.predictions?.length || 0)
-      } catch { }
-      try {
-        const docs = await api.get(`/auth/get-all-doctors?admin_token=${adminToken}`)
-        if (docs.success) {
-          for (const d of (docs.doctors || [])) {
-            try {
-              const res = await api.get(`/predictions/get?user_id=${d.id}`)
-              if (res.success) predCount += (res.count || res.predictions?.length || 0)
-            } catch { }
+        const res = await authService.getProfileStats(user.id, user.role)
+        if (res.success && res.stats) {
+          if (user.role === 'patient') {
+            setPatientQuickStats(res.stats)
+          } else if (user.role === 'admin') {
+            setAdminQuickStats(res.stats)
+          } else if (user.role === 'doctor') {
+            setDoctorQuickStats(prev => ({ ...prev, ...res.stats }))
           }
         }
-      } catch { }
-      setAdminQuickStats({ users: usersCount, predictions: predCount })
-    }
-    loadQuickStats()
-  }, [user])
+      } catch (e) {
+        console.error("Failed to load stats", e)
+      }
 
-  useEffect(() => {
-    const loadDoctorStats = async () => {
-      if (user?.role !== 'doctor') return
-      const doctorId = user?.id
-      // Licence & profile details from doctors list
-      try {
-        const docs = await api.get('/doctors')
-        if (docs.success) {
-          const me = (docs.doctors || []).find(d => d.id === doctorId)
-          if (me) {
-            setDoctorQuickStats(prev => ({ ...prev, licence_no: me.licence_no || '' }))
-            setDoctorProfileInfo({
-              specialization: me.specialization || '',
-              experience: me.experience || '',
-              qualification: me.qualification || ''
-            })
+      // Existing logic to fetch extra doctor info (licence etc) if needed
+      if (user.role === 'doctor') {
+        try {
+          const docs = await authService.getAllDoctors()
+          if (docs.success) {
+            const me = (docs.doctors || []).find(d => d.id === user.id)
+            if (me) {
+              setDoctorQuickStats(prev => ({ ...prev, licence_no: me.licence_no || '' }))
+              setDoctorProfileInfo({
+                specialization: me.specialization || '',
+                experience: me.experience || '',
+                qualification: me.qualification || ''
+              })
+            }
           }
-        }
-      } catch { }
-      // Bookings for this doctor
-      try {
-        const b = await api.get('/bookings')
-        if (b.success) {
-          const mine = (b.bookings || []).filter(x => x.doctor === user.name)
-          const patients = new Set(mine.map(x => x.name))
-          const consultations = mine.filter(x => (x.status || '').toLowerCase() === 'completed').length
-          setDoctorQuickStats(prev => ({ ...prev, patients: patients.size, consultations }))
-        }
-      } catch { }
+        } catch { }
+      }
     }
-    loadDoctorStats()
-  }, [user])
-
-  useEffect(() => {
-    const loadPatientStats = async () => {
-      if (user?.role !== 'patient') return
-      const patientId = user?.id
-      let predCount = 0
-      try {
-        const res = await api.get(`/predictions/get?user_id=${patientId}`)
-        if (res.success) predCount = res.count || (res.predictions || []).length
-      } catch { }
-      let apptCount = 0
-      try {
-        const b = await api.get('/bookings')
-        if (b.success) {
-          apptCount = (b.bookings || []).filter(x => x.name === user.name).length
-        }
-      } catch { }
-      setPatientQuickStats({ predictions: predCount, appointments: apptCount })
-    }
-    loadPatientStats()
+    loadStats()
   }, [user])
 
   const handleCancel = () => {
