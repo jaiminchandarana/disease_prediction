@@ -113,17 +113,36 @@ def send_query(email, subject, query_id):
 def send_otp(email, code):
     sender_email = '24mcajai005@ldce.ac.in'
     app_password = 'hewxzzsykgzcqbuj'
-    yag = yagmail.SMTP(user=sender_email, password=app_password)
     logo_path = get_logo_path()
 
     try:
-        contents = []
+        import smtplib
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
+        from email.mime.image import MIMEImage
+
+        msg = MIMEMultipart()
+        msg['Subject'] = 'Your One-Time Password (OTP)'
+        msg['From'] = sender_email
+        msg['To'] = email
+
+        # Logo handling
+        logo_cid = 'logo_img'
+        logo_html = ""
         if os.path.exists(logo_path):
-            contents.append(yagmail.inline(logo_path))
-        
-        contents.append(f"""
+             with open(logo_path, 'rb') as f:
+                 logo_data = f.read()
+             image = MIMEImage(logo_data)
+             image.add_header('Content-ID', f'<{logo_cid}>')
+             msg.attach(image)
+             logo_html = f'<img src="cid:{logo_cid}" alt="Ayurix Logo" style="max-width: 150px; margin-bottom: 20px;">'
+
+        html_content = f"""
+            <html>
+            <body>
             <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f6f9; border-radius: 8px; color: #333;">
                 <div style="text-align: center;">
+                    {logo_html}
                     <h2 style="color: #0077b6;">Your One-Time Password (OTP)</h2>
                     <p style="font-size: 16px;">Thank you for using Ayurix. Please use the OTP below to proceed:</p>
                     <table align="center" cellpadding="0" cellspacing="0" border="0" style="margin: 8px auto; background: #0077b6; border-radius: 6px;">
@@ -140,14 +159,16 @@ def send_otp(email, code):
                     <p style="font-size: 12px; color: #aaa;">© 2025 Ayurix. Empowering Prevention Through Prediction.</p>
                 </div>
             </div>
-            """)
+            </body>
+            </html>
+            """
+        
+        msg.attach(MIMEText(html_content, 'html'))
 
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(sender_email, app_password)
+            server.send_message(msg)
 
-        yag.send(
-            to=email,
-            subject='Your One-Time Password (OTP)',
-            contents=contents
-        )
         return "OTP sent successfully."
     except Exception as e:
         return f"Error sending OTP: {str(e)}"

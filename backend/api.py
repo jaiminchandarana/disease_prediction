@@ -815,26 +815,13 @@ def admin_patients():
             return jsonify({'success': False, 'error': 'Unauthorized'}), 403
             
         # Unique patients who booked with valid doctors under this admin
-        # Using IDs for join (safer than names)
-        # booking.doctor_id -> role.id (doctor)
-        # booking.patient_id -> role.id (patient) - assuming role table has patients
-        # But wait, looking at get_admin_prediction_cards, it joins 'patient' table?
-        # Let's check if 'patient' table exists separate from 'role'?
-        # Line 1323: JOIN patient p ON b.patient_id = p.patient_id
-        # So there IS a patient table.
-        # But commonly we might use role table for auth.
-        # Let's assume 'role' table is the main user table for now as per 'register' logic.
-        # If 'patient' table is separate, we might need to join that.
-        # From register endpoint (line 81), patients are inserted into 'role'.
-        # So 'patient' table might be legacy or specific details?
-        # Let's try joining 'role' first as it contains email/phone/address.
-        
+        # Using Name matching as booking table lacks IDs
         cur.execute(
             """
             SELECT DISTINCT p.full_name, p.email, p.phone, p.address
             FROM booking b
-            JOIN role d ON d.id = b.doctor_id AND d.admin_id = %s
-            JOIN role p ON p.id = b.patient_id
+            JOIN role d ON d.full_name = b.doctor AND d.admin_id = %s
+            JOIN role p ON p.full_name = b.name
             ORDER BY 1 ASC
             """,
             (admin_token,)
@@ -859,12 +846,19 @@ def profile_stats():
         cur = conn.cursor()
         stats = {}
         
+        # We need user's full_name for booking queries
+        cur.execute("SELECT full_name FROM role WHERE id = %s", (user_id,))
+        user_row = cur.fetchone()
+        full_name = user_row[0] if user_row else ""
+        
         if role == 'patient':
-            # Count predictions
+            # Count predictions (linked by id in prediction table usually, or name?)
+            # Prediction table uses user_id usually. Checking download_prediction_pdf: "WHERE id = %s" (user_id)
+            # So prediction table is fine with ID.
             cur.execute("SELECT COUNT(*) FROM prediction WHERE id = %s", (user_id,))
             stats['predictions'] = cur.fetchone()[0]
-            # Count appointments
-            cur.execute("SELECT COUNT(*) FROM booking WHERE patient_id = %s", (user_id,))
+            # Count appointments (booking table matches by name)
+            cur.execute("SELECT COUNT(*) FROM booking WHERE name = %s", (full_name,))
             stats['appointments'] = cur.fetchone()[0]
             
         elif role == 'admin':
@@ -873,11 +867,10 @@ def profile_stats():
             stats['doctors'] = cur.fetchone()[0]
             
             # Count Patients (distinct people who booked with this admin's doctors)
-            # Using similar logic to admin_overview
             cur.execute("""
-                SELECT COUNT(DISTINCT b.patient_id) 
+                SELECT COUNT(DISTINCT b.name) 
                 FROM booking b
-                JOIN role d ON d.id = b.doctor_id
+                JOIN role d ON d.full_name = b.doctor
                 WHERE d.admin_id = %s
             """, (user_id,))
             stats['users'] = cur.fetchone()[0]
@@ -886,18 +879,18 @@ def profile_stats():
             cur.execute("""
                 SELECT COUNT(*) 
                 FROM booking b
-                JOIN role d ON d.id = b.doctor_id
+                JOIN role d ON d.full_name = b.doctor
                 WHERE d.admin_id = %s
             """, (user_id,))
             stats['predictions'] = cur.fetchone()[0]
 
         elif role == 'doctor':
              # Count Unique Patients
-             cur.execute("SELECT COUNT(DISTINCT patient_id) FROM booking WHERE doctor_id = %s", (user_id,))
+             cur.execute("SELECT COUNT(DISTINCT name) FROM booking WHERE doctor = %s", (full_name,))
              stats['patients'] = cur.fetchone()[0]
              
              # Count Consultations (Completed bookings)
-             cur.execute("SELECT COUNT(*) FROM booking WHERE doctor_id = %s AND status = 'completed'", (user_id,))
+             cur.execute("SELECT COUNT(*) FROM booking WHERE doctor = %s AND status = 'completed'", (full_name,))
              stats['consultations'] = cur.fetchone()[0] 
             
         cur.close(); conn.close()
