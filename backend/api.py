@@ -27,7 +27,7 @@ if os.path.exists(gtk3_path):
 otp_store = {}
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": ["https://ayurix.vercel.app","http://localhost:5173", "http://localhost:5174", "http://localhost:3000"]}})
+CORS(app, resources={r"/*": {"origins": ["https://ayurix.vercel.app","http://localhost:5173", "http://localhost:5174", "http://localhost:3000"], "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"], "allow_headers": ["Content-Type", "Authorization"], "supports_credentials": True}})
 
 @app.route('/')
 def home():
@@ -1092,6 +1092,280 @@ def download_prediction_pdf():
         pdf_bytes.seek(0)
         filename = f"prediction_{pid}_{pdate.strftime('%Y%m%d%H%M') if pdate else 'report'}.pdf"
         return send_file(pdf_bytes, mimetype='application/pdf', as_attachment=True, download_name=filename)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ---------------------------------------------------------------------
+# PROFILE & SECURITY ENDPOINTS
+# ---------------------------------------------------------------------
+
+@app.route('/api/auth/profile', methods=['PUT', 'OPTIONS'])
+def update_profile():
+    if request.method == 'OPTIONS':
+        return jsonify({'success': True}), 200
+        
+    try:
+        data = request.json
+        full_name = data.get('name')
+        phone = data.get('phone')
+        address = data.get('address')
+        user_id = data.get('id')
+
+        # Update valid fields
+        # Note: In a real app we might update 'full_name' or 'name' depending on value
+        conn = connection()
+        cur = conn.cursor()
+        
+        # We need to map 'id' -> 'id' column in 'role' table
+        # We assume phone, address, full_name can be updated
+        cur.execute(
+            """
+            UPDATE role
+            SET full_name = %s, phone = %s, address = %s
+            WHERE id = %s
+            """,
+            (full_name, phone, address, user_id)
+        )
+        conn.commit()
+        
+        # Fetch updated user to return
+        cur.execute("SELECT * FROM role WHERE id = %s", (user_id,))
+        user = cur.fetchone()
+        cur.close()
+        conn.close()
+
+        if user:
+            user_data = {
+                'id': user[0],
+                'name': user[1],
+                'full_name': user[1],
+                'email': user[2],
+                'phone': user[3],
+                'role': user[5],
+                'address': user[6],
+                'admin_id': user[14] if len(user) > 14 else None
+            }
+            return jsonify({'success': True, 'user': user_data}), 200
+        else:
+            return jsonify({'success': False, 'error': 'User not found'}), 404
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/auth/change-password', methods=['PUT', 'OPTIONS'])
+def change_password():
+    if request.method == 'OPTIONS':
+        return jsonify({'success': True}), 200
+
+    try:
+        data = request.json
+        user_id = data.get('userId')
+        current_password = data.get('currentPassword')
+        new_password = data.get('newPassword')
+
+        conn = connection()
+        cur = conn.cursor()
+
+        # Verify current password
+        cur.execute("SELECT password FROM role WHERE id = %s", (user_id,))
+        result = cur.fetchone()
+        
+        if not result:
+            cur.close(); conn.close()
+            return jsonify({'success': False, 'error': 'User not found'}), 404
+            
+        stored_hash = result[0]
+        if hash_password(current_password) != stored_hash:
+            cur.close(); conn.close()
+            return jsonify({'success': False, 'error': 'Incorrect current password'}), 400
+
+        # Update password
+        new_hash = hash_password(new_password)
+        cur.execute("UPDATE role SET password = %s WHERE id = %s", (new_hash, user_id))
+        conn.commit()
+        cur.close(); conn.close()
+        
+        return jsonify({'success': True, 'message': 'Password updated'}), 200
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/auth/send-otp', methods=['POST', 'OPTIONS'])
+def send_otp_endpoint():
+    if request.method == 'OPTIONS':
+        return jsonify({'success': True}), 200
+        
+    try:
+        data = request.json
+        email = data.get('email')
+        
+        # Generate 6-digit OTP
+        import random
+        otp = str(random.randint(100000, 999999))
+        
+        # Store in memory (production: use Redis/DB with expiry)
+        otp_store[email] = otp
+        
+        # Send via email
+        from mail import send_otp
+        send_otp(email, otp)
+        
+        return jsonify({'success': True, 'message': 'OTP sent'}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/auth/reset-password-otp', methods=['PUT', 'OPTIONS'])
+def reset_password_otp():
+    if request.method == 'OPTIONS':
+        return jsonify({'success': True}), 200
+
+    try:
+        data = request.json
+        email = data.get('email')
+        otp = data.get('otp')
+        new_password = data.get('newPassword')
+        
+        # Verify OTP
+        if email not in otp_store or otp_store[email] != otp:
+             return jsonify({'success': False, 'error': 'Invalid or expired OTP'}), 400
+             
+        # Delete OTP after use
+        del otp_store[email]
+        
+        # Update password
+        conn = connection()
+        cur = conn.cursor()
+        new_hash = hash_password(new_password)
+        cur.execute("UPDATE role SET password = %s WHERE email = %s", (new_hash, email))
+        conn.commit()
+        cur.close(); conn.close()
+        
+        return jsonify({'success': True, 'message': 'Password reset successfully'}), 200
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ---------------------------------------------------------------------
+# CONSOLIDATED API ENDPOINTS (from contact.py, prediction.py)
+# ---------------------------------------------------------------------
+
+@app.route('/api/contact/add', methods=['POST'])
+def add_contact_query():
+    try:
+        data = request.json
+        name = data.get('name')
+        email = data.get('email')
+        subject = data.get('subject')
+        message = data.get('message')
+        
+        if not all([name, email, subject, message]):
+             return jsonify({'success': False, 'error': 'Missing fields'}), 400
+
+        # Logic from contact.py
+        query_id = generate_code()
+        conn = connection()
+        cur = conn.cursor()
+        cur.execute("INSERT INTO contact (name,email,subject,message,query_id) VALUES (%s,%s,%s,%s,%s)",
+                    (name.lower(), email.lower(), subject.lower(), message.lower(), query_id))
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        # Send query email
+        try:
+            from mail import send_query
+            send_query(email, subject, query_id)
+        except: 
+            pass
+            
+        return jsonify({'success': True, 'message': 'Query submitted', 'query_id': query_id}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/contact/get', methods=['GET'])
+def get_contact_query():
+    try:
+        query_id = request.args.get('query_id')
+        if not query_id:
+            return jsonify({'success': False, 'error': 'Missing query_id'}), 400
+            
+        conn = connection()
+        cur = conn.cursor()
+        # Logic from contact.py
+        cur.execute("SELECT * FROM contact WHERE query_id = %s", (query_id,))
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        # Format response
+        contacts = []
+        for r in rows:
+            contacts.append({
+                'name': r[0], 'email': r[1], 'subject': r[2], 'message': r[3], 'query_id': r[4], 'created_at': r[5]
+            })
+            
+        return jsonify({'success': True, 'queries': contacts}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/prediction/card/admin', methods=['GET'])
+def get_admin_prediction_cards():
+    try:
+        admin_id = request.args.get('admin_id')
+        if not admin_id:
+             return jsonify({'success': False, 'error': 'Missing admin_id'}), 400
+             
+        conn = connection()
+        cur = conn.cursor()
+        # Logic from prediction.py: fetch_prediction_card_by_admin
+        cur.execute(f"SELECT d.first_name || ' ' || d.last_name AS doctor_fullname, p.first_name || ' ' || p.last_name AS patient_fullname,b.doctor_id, b.patient_id, b.predicted_at, b.prediction, b.prediction_id FROM doctor d JOIN booking b ON d.admin_id = b.admin_id JOIN patient p ON b.patient_id = p.patient_id WHERE d.admin_id = {admin_id}")
+        rows = cur.fetchall()
+        cur.close(); conn.close()
+        
+        # Map rows to dict
+        cards = []
+        for r in rows:
+            cards.append({
+                'doctor_fullname': r[0],
+                'patient_fullname': r[1],
+                'doctor_id': r[2],
+                'patient_id': r[3],
+                'predicted_at': r[4],
+                'prediction': r[5],
+                'prediction_id': r[6]
+            })
+        return jsonify({'success': True, 'cards': cards}), 200
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/prediction/card/doctor', methods=['GET'])
+def get_doctor_prediction_cards():
+    try:
+        doctor_id = request.args.get('doctor_id')
+        if not doctor_id:
+             return jsonify({'success': False, 'error': 'Missing doctor_id'}), 400
+             
+        conn = connection()
+        cur = conn.cursor()
+        # Logic from prediction.py: fetch_prediction_card_by_doctor
+        cur.execute(f"SELECT d.first_name || ' ' || d.last_name AS doctor_fullname, p.first_name || ' ' || p.last_name AS patient_fullname,b.doctor_id, b.patient_id, b.predicted_at, b.prediction, b.prediction_id FROM doctor d JOIN booking b ON d.doctor_id = b.doctor_id JOIN patient p ON b.patient_id = p.patient_id WHERE d.doctor_id = {doctor_id}")
+        rows = cur.fetchall()
+        cur.close(); conn.close()
+        
+        cards = []
+        for r in rows:
+            cards.append({
+                'doctor_fullname': r[0],
+                'patient_fullname': r[1],
+                'doctor_id': r[2],
+                'patient_id': r[3],
+                'predicted_at': r[4],
+                'prediction': r[5],
+                'prediction_id': r[6]
+            })
+        return jsonify({'success': True, 'cards': cards}), 200
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useAuth } from '../auth/AuthContext'
-import { FaUser, FaEnvelope, FaPhone, FaMapMarkerAlt, FaEdit, FaSave, FaTimes } from 'react-icons/fa'
 import { FaUser, FaEnvelope, FaPhone, FaMapMarkerAlt, FaEdit, FaSave, FaTimes, FaLock, FaKey } from 'react-icons/fa'
 import { authService } from '../services/api'
 import toast from 'react-hot-toast'
@@ -72,13 +71,7 @@ const Profile = () => {
       name: user?.name || '',
       email: user?.email || '',
       phone: user?.phone || '',
-      address: user?.address || '',
-      dateOfBirth: user?.dateOfBirth || '',
-      address: user?.address || '',
-      dateOfBirth: user?.dateOfBirth || '',
-      emergencyContact: user?.emergencyContact || '',
-      emergencyContact: user?.emergencyContact || '',
-      medicalHistory: user?.medicalHistory || ''
+      address: user?.address || ''
     }
   })
 
@@ -376,12 +369,12 @@ const Profile = () => {
 
 
 
-                  <div className="col-12">
+                  <div className="col-md-6">
                     <label className="form-label fw-semibold">Address</label>
                     {isEditing ? (
-                      <textarea
+                      <input
+                        type="text"
                         className="form-control"
-                        rows="2"
                         {...register('address')}
                       />
                     ) : (
@@ -496,83 +489,83 @@ const Profile = () => {
           </div>
         </div>
       </div>
-    </div>
-      
-      {/* Password Modal */ }
-  {
-    isPasswordModalOpen && (
-      <div className="modal d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-        <div className="modal-dialog modal-dialog-centered">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h5 className="modal-title">Change Password</h5>
-              <button type="button" className="btn-close" onClick={() => setIsPasswordModalOpen(false)}></button>
-            </div>
-            <div className="modal-body">
-              {/* Tabs */}
-              <ul className="nav nav-tabs mb-3">
-                <li className="nav-item">
-                  <button
-                    className={`nav-link ${pwdMode === 'current' ? 'active' : ''}`}
-                    onClick={() => setPwdMode('current')}>
-                    Verify Current Password
-                  </button>
-                </li>
-                <li className="nav-item">
-                  <button
-                    className={`nav-link ${pwdMode === 'otp' ? 'active' : ''}`}
-                    onClick={() => setPwdMode('otp')}>
-                    Verify via Email OTP
-                  </button>
-                </li>
-              </ul>
 
-              {pwdMode === 'current' ? (
-                <div className="d-flex flex-column gap-3">
-                  <div>
-                    <label className="form-label">Current Password</label>
-                    <input type="password" name="current" className="form-control" value={pwdData.current} onChange={handlePwdChange} />
-                  </div>
-                  <div>
-                    <label className="form-label">New Password</label>
-                    <input type="password" name="new" className="form-control" value={pwdData.new} onChange={handlePwdChange} />
-                  </div>
+
+      {/* Password Modal */}
+      {
+        isPasswordModalOpen && (
+          <div className="modal d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <div className="modal-dialog modal-dialog-centered">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">Change Password</h5>
+                  <button type="button" className="btn-close" onClick={() => setIsPasswordModalOpen(false)}></button>
                 </div>
-              ) : (
-                <div className="d-flex flex-column gap-3">
-                  {!otpSent ? (
-                    <div className="text-center py-3">
-                      <p>We will send a 6-digit OTP to <strong>{user.email}</strong></p>
-                      <button type="button" className="btn btn-primary" onClick={handleSendOtp}>Send OTP</button>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="alert alert-success py-2">OTP Sent to mail!</div>
+                <div className="modal-body">
+                  {/* Tabs */}
+                  <ul className="nav nav-tabs mb-3">
+                    <li className="nav-item">
+                      <button
+                        className={`nav-link ${pwdMode === 'current' ? 'active' : ''}`}
+                        onClick={() => setPwdMode('current')}>
+                        Verify Current Password
+                      </button>
+                    </li>
+                    <li className="nav-item">
+                      <button
+                        className={`nav-link ${pwdMode === 'otp' ? 'active' : ''}`}
+                        onClick={() => setPwdMode('otp')}>
+                        Verify via Email OTP
+                      </button>
+                    </li>
+                  </ul>
+
+                  {pwdMode === 'current' ? (
+                    <div className="d-flex flex-column gap-3">
                       <div>
-                        <label className="form-label">Enter 6-digit OTP</label>
-                        <input type="text" name="otp" className="form-control" value={pwdData.otp} onChange={handlePwdChange} placeholder="123456" />
+                        <label className="form-label">Current Password</label>
+                        <input type="password" name="current" className="form-control" value={pwdData.current} onChange={handlePwdChange} autoComplete="new-password" />
                       </div>
                       <div>
                         <label className="form-label">New Password</label>
-                        <input type="password" name="new" className="form-control" value={pwdData.new} onChange={handlePwdChange} />
+                        <input type="password" name="new" className="form-control" value={pwdData.new} onChange={handlePwdChange} autoComplete="new-password" />
                       </div>
-                    </>
+                    </div>
+                  ) : (
+                    <div className="d-flex flex-column gap-3">
+                      {!otpSent ? (
+                        <div className="text-center py-3">
+                          <p>We will send a 6-digit OTP to <strong>{user.email}</strong></p>
+                          <button type="button" className="btn btn-primary" onClick={handleSendOtp}>Send OTP</button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="alert alert-success py-2">OTP Sent to mail!</div>
+                          <div>
+                            <label className="form-label">Enter 6-digit OTP</label>
+                            <input type="text" name="otp" className="form-control" value={pwdData.otp} onChange={handlePwdChange} placeholder="123456" />
+                          </div>
+                          <div>
+                            <label className="form-label">New Password</label>
+                            <input type="password" name="new" className="form-control" value={pwdData.new} onChange={handlePwdChange} />
+                          </div>
+                        </>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
-            <div className="modal-footer">
-              <button type="button" className="btn btn-secondary" onClick={() => setIsPasswordModalOpen(false)}>Cancel</button>
-              {/* Show Save button if mode is 'current' OR (mode is 'otp' AND otp has been sent) */}
-              {(pwdMode === 'current' || (pwdMode === 'otp' && otpSent)) && (
-                <button type="button" className="btn btn-primary" onClick={handleSubmitPassword}>Change Password</button>
-              )}
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-secondary" onClick={() => setIsPasswordModalOpen(false)}>Cancel</button>
+                  {/* Show Save button if mode is 'current' OR (mode is 'otp' AND otp has been sent) */}
+                  {(pwdMode === 'current' || (pwdMode === 'otp' && otpSent)) && (
+                    <button type="button" className="btn btn-primary" onClick={handleSubmitPassword}>Change Password</button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
-    )
-  }
+        )
+      }
     </div >
   )
 }

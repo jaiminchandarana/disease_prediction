@@ -266,6 +266,7 @@ const ContactDoctor = () => {
                       value="online"
                       checked={appointmentType === 'online'}
                       onChange={(e) => setAppointmentType(e.target.value)}
+                      disabled={!selectedDoctor.isOnline}
                     />
                     <label className="form-check-label" htmlFor="online">
                       <FaVideo className="me-1" />

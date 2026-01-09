@@ -247,11 +247,15 @@ const Navbar = () => {
                     <span className="input-group-text bg-white border-end-0">
                       <FaSearch className="text-muted" />
                     </span>
+                    {/* Dummy hidden input to prevent autofill */}
+                    <input type="password" style={{ display: 'none' }} />
                     <input
                       type="text"
                       className="form-control border-start-0 ps-0"
                       placeholder="Search..."
                       value={searchQuery}
+                      name="unique_nav_search_disabled_autofill"
+                      autoComplete="new-password"
                       onChange={(e) => handleSearch(e.target.value)}
                       onFocus={() => searchQuery && setShowSearchResults(true)}
                     />
@@ -379,7 +383,7 @@ const Navbar = () => {
                 </li>
 
                 {/* User Menu */}
-                <li className="nav-item dropdown" ref={dropdownRef}>
+                <li className="nav-item dropdown position-relative" ref={dropdownRef}>
                   <button
                     className="btn btn-link nav-link d-flex align-items-center border-0 bg-transparent"
                     onClick={() => setShowUserMenu(!showUserMenu)}
@@ -391,11 +395,11 @@ const Navbar = () => {
                     >
                       {getInitials(user?.name)}
                     </div>
-                    <span className="d-none d-md-inline">{user?.name}</span>
+                    <span className="d-none d-md-inline text-truncate" style={{ maxWidth: '150px' }}>{user?.name}</span>
                   </button>
 
                   {showUserMenu && (
-                    <div className="dropdown-menu dropdown-menu-end show position-absolute">
+                    <div className="dropdown-menu dropdown-menu-end show position-absolute" style={{ right: 0, left: 'auto', minWidth: '240px', maxWidth: '90vw' }}>
                       <div className="dropdown-header">
                         <small className="text-muted">
                           {user?.role === 'admin' ? 'Administrator' :
