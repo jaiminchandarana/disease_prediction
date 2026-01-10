@@ -14,16 +14,17 @@ const Navbar = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [showSearchResults, setShowSearchResults] = useState(false)
+  const [isNavOpen, setIsNavOpen] = useState(false) // New state for mobile menu
 
   const dropdownRef = useRef(null)
   const notificationRef = useRef(null)
   const searchRef = useRef(null)
+  const navRef = useRef(null) // New ref for navbar
 
   const [notifications, setNotifications] = useState(notificationService.getAll(user))
 
   const unreadCount = notifications.filter(n => !n.read).length
 
-  // Sync notifications from localStorage across tabs and when others add
   // Sync notifications from localStorage across tabs and when others add
   useEffect(() => {
     const sync = () => setNotifications(notificationService.getAll(user))
@@ -64,6 +65,7 @@ const Navbar = () => {
     navigate(path)
     setSearchQuery('')
     setShowSearchResults(false)
+    setIsNavOpen(false) // Close mobile menu if open
   }
 
   const handleNotificationClick = (notification) => {
@@ -72,12 +74,14 @@ const Navbar = () => {
 
     if (notification.type === 'success') {
       navigate('/dashboard/booking-status')
+      setIsNavOpen(false)
     }
   }
 
   const handleViewAllNotifications = () => {
     setShowNotifications(false)
     navigate('/history')
+    setIsNavOpen(false)
   }
 
   const toggleNotifications = () => {
@@ -96,6 +100,7 @@ const Navbar = () => {
   const handleLogout = () => {
     logout()
     navigate('/')
+    setIsNavOpen(false)
   }
 
   const getInitials = (name) => {
@@ -120,6 +125,14 @@ const Navbar = () => {
       if (searchRef.current && !searchRef.current.contains(event.target)) {
         setShowSearchResults(false)
       }
+      // Close mobile menu if clicked outside
+      if (navRef.current && !navRef.current.contains(event.target)) {
+        // Check if the click target is the toggler button
+        const toggler = document.querySelector('.navbar-toggler');
+        if (toggler && !toggler.contains(event.target)) {
+          setIsNavOpen(false);
+        }
+      }
     }
 
     document.addEventListener('mousedown', handleClickOutside)
@@ -130,19 +143,16 @@ const Navbar = () => {
 
   // Close mobile menu when route changes
   useEffect(() => {
-    // Safely attempt to close navbar if clear bootstrap instance is available
-    // Otherwise rely on user interaction to avoid 'undefined' crash
-    const navbarCollapse = document.querySelector('.navbar-collapse')
-    if (navbarCollapse && navbarCollapse.classList.contains('show')) {
-      navbarCollapse.classList.remove('show')
-    }
+    setIsNavOpen(false)
   }, [location])
 
+  const closeNav = () => setIsNavOpen(false)
+
   return (
-    <nav className="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
+    <nav className="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top" ref={navRef}>
       <div className="container-fluid">
         {/* Brand */}
-        <Link className="navbar-brand d-flex align-items-center" to="/">
+        <Link className="navbar-brand d-flex align-items-center" to="/" onClick={closeNav}>
           <img src={logo} alt="Logo" className="me-2" style={{ width: '150px', height: 'auto' }} />
         </Link>
 
@@ -150,16 +160,15 @@ const Navbar = () => {
         <button
           className="navbar-toggler border-0"
           type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarNav"
+          onClick={() => setIsNavOpen(!isNavOpen)}
           aria-controls="navbarNav"
-          aria-expanded="false"
+          aria-expanded={isNavOpen}
           aria-label="Toggle navigation"
         >
-          <FaBars />
+          {isNavOpen ? <FaTimes /> : <FaBars />}
         </button>
 
-        <div className="collapse navbar-collapse" id="navbarNav">
+        <div className={`collapse navbar-collapse ${isNavOpen ? 'show' : ''}`} id="navbarNav">
           {/* Public Navigation */}
           {!isAuthenticated && (
             <>
@@ -168,6 +177,7 @@ const Navbar = () => {
                   <Link
                     className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}
                     to="/"
+                    onClick={closeNav}
                   >
                     Home
                   </Link>
@@ -176,6 +186,7 @@ const Navbar = () => {
                   <Link
                     className={`nav-link ${location.pathname === '/about' ? 'active' : ''}`}
                     to="/about"
+                    onClick={closeNav}
                   >
                     About Us
                   </Link>
@@ -184,6 +195,7 @@ const Navbar = () => {
                   <Link
                     className={`nav-link ${location.pathname === '/services' ? 'active' : ''}`}
                     to="/services"
+                    onClick={closeNav}
                   >
                     Services
                   </Link>
@@ -192,6 +204,7 @@ const Navbar = () => {
                   <Link
                     className={`nav-link ${location.pathname === '/contact' ? 'active' : ''}`}
                     to="/contact"
+                    onClick={closeNav}
                   >
                     Contact
                   </Link>
@@ -199,10 +212,10 @@ const Navbar = () => {
               </ul>
 
               <div className="navbar-nav">
-                <Link className="btn btn-outline-primary me-2" to="/login">
+                <Link className="btn btn-outline-primary me-2 mb-2 mb-lg-0" to="/login" onClick={closeNav}>
                   Login
                 </Link>
-                <Link className="btn btn-primary" to="/register">
+                <Link className="btn btn-primary" to="/register" onClick={closeNav}>
                   Get Started
                 </Link>
               </div>
@@ -218,6 +231,7 @@ const Navbar = () => {
                   <Link
                     className={`nav-link ${location.pathname === '/dashboard' ? 'active' : ''}`}
                     to="/dashboard"
+                    onClick={closeNav}
                   >
                     Dashboard
                   </Link>
@@ -226,6 +240,7 @@ const Navbar = () => {
                   <Link
                     className={`nav-link ${location.pathname.includes('/predict') ? 'active' : ''}`}
                     to="/predict"
+                    onClick={closeNav}
                   >
                     Predict
                   </Link>
@@ -234,6 +249,7 @@ const Navbar = () => {
                   <Link
                     className={`nav-link ${location.pathname === '/history' ? 'active' : ''}`}
                     to="/history"
+                    onClick={closeNav}
                   >
                     History
                   </Link>
@@ -421,7 +437,7 @@ const Navbar = () => {
                       <Link
                         className="dropdown-item"
                         to="/profile"
-                        onClick={() => setShowUserMenu(false)}
+                        onClick={() => { setShowUserMenu(false); closeNav(); }}
                       >
                         <FaUser className="me-2" />
                         Profile
