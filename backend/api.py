@@ -12,6 +12,11 @@ import os
 import sys
 from weasyprint import HTML
 from io import BytesIO
+import threading
+
+def run_async(func, *args, **kwargs):
+    thread = threading.Thread(target=func, args=args, kwargs=kwargs)
+    thread.start()
 
 # Add GTK3 to PATH
 gtk3_path = r'C:\Program Files\GTK3-Runtime Win64\bin'
@@ -93,10 +98,10 @@ def register():
         cur.close()
         conn.close()
         
-        # Send credentials email
+        # Send credentials email (Async)
         try:
             from mail import send_credential
-            send_credential(email, password)
+            run_async(send_credential, email, password)
         except Exception:
             pass
 
@@ -303,10 +308,10 @@ def register_doctor():
         cur.close()
         conn.close()
         
-        # Send credentials email
+        # Send credentials email (Async)
         try:
             from mail import send_credential
-            send_credential(email, password)
+            run_async(send_credential, email, password)
         except Exception:
             pass
 
@@ -1305,9 +1310,9 @@ def send_otp_endpoint():
         # Store in memory (production: use Redis/DB with expiry)
         otp_store[email] = otp
         
-        # Send via email
+        # Send via email (Async)
         from mail import send_otp
-        send_otp(email, otp)
+        run_async(send_otp, email, otp)
         
         return jsonify({'success': True, 'message': 'OTP sent'}), 200
     except Exception as e:
@@ -1371,10 +1376,10 @@ def add_contact_query():
         cur.close()
         conn.close()
         
-        # Send query email
+        # Send query email (Async)
         try:
             from mail import send_query
-            send_query(email, subject, query_id)
+            run_async(send_query, email, subject, query_id)
         except: 
             pass
             
